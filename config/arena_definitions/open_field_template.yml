@@ -1,0 +1,76 @@
+# Open Field Test - Arena Configuration Template
+# This template defines the arena layout and zones for open field behavioral testing
+
+arena_name: "standard_open_field"
+paradigm: "open_field"
+version: "1.0"
+
+# Arena physical dimensions
+dimensions:
+  width: 500                    # Arena width in pixels or cm
+  height: 500                   # Arena height
+  units: "pixels"               # "pixels" or "cm"
+
+# Reference points (maze corners) - OPTIONAL
+# Set enabled: true if tracking arena corners for calibration
+reference_points:
+  enabled: false                # Set to true if tracking maze corners
+  detection_method: "tracked"   # "tracked" (from DLC) or "manual" (user-defined)
+  points:
+    - name: "top_left"
+      abbreviation: "tl"
+      role: "corner"
+    - name: "top_right"
+      abbreviation: "tr"
+      role: "corner"
+    - name: "bottom_left"
+      abbreviation: "bl"
+      role: "corner"
+    - name: "bottom_right"
+      abbreviation: "br"
+      role: "corner"
+
+# Zone definitions
+zones:
+  # Center zone (typically 50% of arena area)
+  - name: "center"
+    type: "rectangle"
+    definition:
+      method: "proportion"      # proportion of total arena
+      x_min: 0.25               # 25% from left edge
+      x_max: 0.75               # 75% from left edge
+      y_min: 0.25               # 25% from top edge
+      y_max: 0.75               # 75% from top edge
+    metrics:
+      time_in_zone: true
+      entries: true
+      latency: true
+
+  # Periphery zone (edges of arena)
+  - name: "periphery"
+    type: "inverse"
+    definition:
+      method: "inverse"
+      reference_zone: "center"
+    metrics:
+      time_in_zone: true
+      entries: true
+
+# Body part configuration
+body_parts:
+  primary_tracking_point: "bodycentre"    # Main point for zone analysis
+  required_points:
+    - "bodycentre"
+  optional_points:
+    - "nose"
+    - "tailbase"
+
+# Paradigm-specific metrics
+metrics:
+  thigmotaxis:
+    enabled: true
+    periphery_zone: "periphery"
+
+  center_exploration:
+    enabled: true
+    center_zone: "center"

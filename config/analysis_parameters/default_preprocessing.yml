@@ -1,0 +1,92 @@
+# Default Preprocessing Parameters
+# These settings control how raw tracking data is cleaned and prepared for analysis
+
+preprocessing:
+  version: "1.0"
+
+  # Likelihood filtering
+  # Removes or flags tracking points with low confidence scores
+  likelihood_threshold:
+    enabled: true
+    threshold: 0.9              # Remove points with likelihood < 0.9
+    method: "hard"              # "hard" (remove) or "soft" (flag but keep)
+    apply_to: "all"             # "all" body parts or list of specific parts
+
+  # Missing data interpolation
+  # Fills gaps in tracking data
+  interpolation:
+    enabled: true
+    method: "linear"            # "linear", "spline", or "polynomial"
+    max_gap: 5                  # Maximum gap size in frames to interpolate
+    boundary_handling: "extrapolate"  # "extrapolate", "na", or "edge"
+    apply_to: "all"
+
+  # Trajectory smoothing
+  # Reduces noise in tracking data
+  smoothing:
+    enabled: true
+    method: "savitzky_golay"    # "savgol", "moving_average", or "gaussian"
+
+    # Savitzky-Golay parameters (used if method is "savgol")
+    window_length: 11           # Must be odd number
+    polyorder: 3                # Polynomial order (< window_length)
+
+    # Alternative: Moving average parameters
+    # window_length: 5
+
+    # Alternative: Gaussian parameters
+    # sigma: 2.0
+
+    apply_to: "all"
+    preserve_endpoints: true
+
+  # Outlier detection
+  # Identifies and handles suspicious tracking points
+  outlier_detection:
+    enabled: true
+    method: "displacement"      # "displacement", "zscore", or "iqr"
+    threshold: 100              # pixels - maximum single-frame movement
+    action: "flag"              # "flag", "remove", or "replace"
+    replacement_method: "interpolate"  # If action is "replace"
+
+  # Coordinate transformations
+  transformations:
+    # Pixel to cm conversion
+    pixel_to_cm:
+      enabled: false
+      scale_factor: 0.1         # cm per pixel
+      method: "constant"        # "constant" or "reference_points"
+
+    # Coordinate centering
+    center_coordinates:
+      enabled: false
+      reference_point: "center" # Point name or zone name
+      center_x: true
+      center_y: true
+
+# Quality checks
+# Validates tracking data quality before analysis
+quality_checks:
+  enabled: true
+
+  # Data completeness
+  completeness:
+    minimum_frames: 100
+    minimum_proportion: 0.7     # 70% of frames must have valid data
+
+  # Tracking quality
+  tracking_quality:
+    max_missing_consecutive: 10  # frames
+    max_missing_proportion: 0.3  # 30% per body part
+    min_average_likelihood: 0.8
+
+  # Arena containment
+  # Checks if tracking stays within arena bounds
+  arena_check:
+    enabled: true
+    tolerance: 20               # pixels outside arena before warning
+    action: "warn"              # "warn" or "error"
+
+  # Generate quality report
+  generate_report: true
+  report_format: "text"         # "text", "html", or "both"
