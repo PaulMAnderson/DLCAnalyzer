@@ -157,13 +157,22 @@ parse_dlc_data <- function(dlc_raw) {
     body_part <- bodyparts[i]
 
     # Extract x, y, likelihood
+    x_vals <- as.numeric(raw_data[, i])
+    y_vals <- as.numeric(raw_data[, i + 1])
+    likelihood_vals <- as.numeric(raw_data[, i + 2])
+
+    # DLC uses -1 to indicate filtered/missing data - convert to NA
+    likelihood_vals[likelihood_vals < 0] <- NA
+    x_vals[is.na(likelihood_vals)] <- NA
+    y_vals[is.na(likelihood_vals)] <- NA
+
     bp_data <- data.frame(
       frame = frames,
       time = frames / fps,
       body_part = body_part,
-      x = as.numeric(raw_data[, i]),
-      y = as.numeric(raw_data[, i + 1]),
-      likelihood = as.numeric(raw_data[, i + 2]),
+      x = x_vals,
+      y = y_vals,
+      likelihood = likelihood_vals,
       stringsAsFactors = FALSE
     )
 
