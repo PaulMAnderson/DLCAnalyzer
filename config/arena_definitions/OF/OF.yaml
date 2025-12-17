@@ -1,0 +1,278 @@
+arenas:
+  - id: arena1
+    image: OF.bmp
+    points:
+      top_left: [250, 56]
+      top_right: [565, 56]
+      bottom_left: [250, 378]
+      bottom_right: [565, 378]
+    zones:
+    # Base zone defined by points
+      - id: arena
+        name: "arena"
+        type: points
+        point_names: ["top_left", "top_right", "bottom_right", "bottom_left"]
+      
+      # Region within outer_zone (proportional)
+      - id: centre
+        name: "centre"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.25, 0.25, 0.75, 0.75]  # [left%, top%, right%, bottom%]
+      # Region within outer_zone (proportional)
+      - id: left_wall
+        name: "Left Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0, 0.25, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: right_wall
+        name: "Right Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.75, 0, 1, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: top_wall
+        name: "Top Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0, 1, 0.25]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: bottom_wall
+        name: "Bottom Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0.75, 1, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: top_left_corner
+        name: "Top Left Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0, 0.25, 0.25]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: top_right_corner
+        name: "Top Right Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.75, 0, 1, 0.25]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: bottom_left_corner
+        name: "Bottom Left Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0.75, 0.25, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: bottom_right_corner
+        name: "Bottom Right Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.75, 0.75, 1, 1]  # [left%, top%, right%, bottom%]
+
+  
+  - id: arena2
+    image: OF.bmp
+    points:
+      top_left: [596, 54]
+      top_right: [913, 49]
+      bottom_left: [589, 378]
+      bottom_right: [916, 371]
+    zones:
+    # Base zone defined by points
+      - id: arena
+        name: "arena"
+        type: points
+        point_names: ["top_left", "top_right", "bottom_right", "bottom_left"]
+      
+      # Region within outer_zone (proportional)
+      - id: centre
+        name: "centre"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.25, 0.25, 0.75, 0.75]  # [left%, top%, right%, bottom%]
+      # Region within outer_zone (proportional)
+      - id: left_wall
+        name: "Left Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0, 0.25, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: right_wall
+        name: "Right Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.75, 0, 1, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: top_wall
+        name: "Top Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0, 1, 0.25]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: bottom_wall
+        name: "Bottom Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0.75, 1, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: top_left_corner
+        name: "Top Left Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0, 0.25, 0.25]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: top_right_corner
+        name: "Top Right Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.75, 0, 1, 0.25]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: bottom_left_corner
+        name: "Bottom Left Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0.75, 0.25, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: bottom_right_corner
+        name: "Bottom Right Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.75, 0.75, 1, 1]  # [left%, top%, right%, bottom%]
+
+  - id: arena3
+    image: OF.bmp
+    points:
+      top_left: [250, 414]
+      top_right: [562, 406]
+      bottom_left: [250, 709]
+      bottom_right: [553, 720]
+    zones:
+    # Base zone defined by points
+      - id: arena
+        name: "arena"
+        type: points
+        point_names: ["top_left", "top_right", "bottom_right", "bottom_left"]
+      
+      # Region within outer_zone (proportional)
+      - id: centre
+        name: "centre"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.25, 0.25, 0.75, 0.75]  # [left%, top%, right%, bottom%]
+      # Region within outer_zone (proportional)
+      - id: left_wall
+        name: "Left Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0, 0.25, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: right_wall
+        name: "Right Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.75, 0, 1, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: top_wall
+        name: "Top Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0, 1, 0.25]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: bottom_wall
+        name: "Bottom Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0.75, 1, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: top_left_corner
+        name: "Top Left Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0, 0.25, 0.25]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: top_right_corner
+        name: "Top Right Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.75, 0, 1, 0.25]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: bottom_left_corner
+        name: "Bottom Left Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0.75, 0.25, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: bottom_right_corner
+        name: "Bottom Right Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.75, 0.75, 1, 1]  # [left%, top%, right%, bottom%]
+
+  - id: arena4
+    image: OF.bmp
+    points:
+      top_left: [592, 404]
+      top_right: [913, 410]
+      bottom_left: [592, 719]
+      bottom_right: [909, 722]
+    zones:
+    # Base zone defined by points
+      - id: arena
+        name: "arena"
+        type: points
+        point_names: ["top_left", "top_right", "bottom_right", "bottom_left"]
+      
+      # Region within outer_zone (proportional)
+      - id: centre
+        name: "centre"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.25, 0.25, 0.75, 0.75]  # [left%, top%, right%, bottom%]
+      # Region within outer_zone (proportional)
+      - id: left_wall
+        name: "Left Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0, 0.25, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: right_wall
+        name: "Right Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.75, 0, 1, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: top_wall
+        name: "Top Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0, 1, 0.25]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: bottom_wall
+        name: "Bottom Wall"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0.75, 1, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: top_left_corner
+        name: "Top Left Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0, 0.25, 0.25]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: top_right_corner
+        name: "Top Right Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.75, 0, 1, 0.25]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: bottom_left_corner
+        name: "Bottom Left Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0, 0.75, 0.25, 1]  # [left%, top%, right%, bottom%]
+              # Region within outer_zone (proportional)
+      - id: bottom_right_corner
+        name: "Bottom Right Corner"
+        type: proportion
+        parent_zone: arena
+        proportion: [0.75, 0.75, 1, 1]  # [left%, top%, right%, bottom%]
+

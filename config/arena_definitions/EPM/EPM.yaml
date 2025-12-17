@@ -1,0 +1,49 @@
+arenas:
+  - id: arena1
+    image: OF.bmp
+    points:
+      top_left: [325, 1]
+      top_right: [385, 1]
+      centre_top_right: [388, 213]
+      right_top: [598, 213]
+      right_bottom: [598, 265]
+      centre_bottom_right: [388, 265]
+      bottom_right: [386, 480]
+      bottom_left: [325, 480]
+      centre_bottom_left: [325, 265]
+      left_bottom: [115, 265]
+      left_top: [115, 215]
+      centre_top_left: [325, 215]
+
+    zones:
+    # Base zone defined by points
+      - id: maze
+        name: "Entire Maze"
+        type: points
+        point_names: ["top_left", "top_right", "centre_top_right", "right_top", "right_bottom", "centre_bottom_right", "bottom_right", "bottom_left", "centre_bottom_left", "left_bottom", "left_top", "centre_top_left"]
+      
+      - id: closed_top
+        name: "Closed Top"
+        type: points
+        point_names: ["top_left", "top_right", "centre_top_right", "centre_top_left"]
+
+      - id: closed_bottom
+        name: "Closed Bottom"
+        type: points
+        point_names: ["centre_bottom_right", "bottom_right", "bottom_left", "centre_bottom_left"]
+
+      - id: open_left
+        name: "Closed Top"
+        type: points
+        point_names: ["left_top", "centre_top_left", "centre_bottom_left", "left_bottom"]
+
+      - id: open_right
+        name: "Closed Top"
+        type: points
+        point_names: ["right_top", "right_bottom", "centre_bottom_right", "centre_top_right"]
+              
+      - id: centre
+        name: "Centre"
+        type: points
+        point_names: ["centre_top_right", "centre_top_left", "centre_bottom_left", "centre_bottom_right"]
+

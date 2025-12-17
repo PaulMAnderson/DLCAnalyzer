@@ -1,0 +1,85 @@
+arenas:
+  - id: arena1
+    image: LD.bmp
+    points:
+      top_left: [251, 222]
+      top_right: [559, 213]
+      bottom_left: [249, 375]
+      bottom_right: [562, 375]
+    zones:
+    # Base zone defined by points
+      - id: light
+        name: "light"
+        type: points
+        point_names: ["top_left", "top_right", "bottom_right", "bottom_left"]
+      
+      # Region within other zone
+      - id: door
+        name: "door"
+        type: proportion
+        parent_zone: light
+        proportion: [0.33, 0, 0.66, 0.33]  # [left%, top%, right%, bottom%]
+  
+  - id: arena2
+    image: LD.bmp
+    points:
+      top_left: [596, 214]
+      top_right: [916, 210]
+      bottom_left: [592, 376]
+      bottom_right: [912, 371]
+    zones:
+    # Base zone defined by points
+      - id: light
+        name: "light"
+        type: points
+        point_names: ["top_left", "top_right", "bottom_right", "bottom_left"]
+      
+      # Region within other zone
+      - id: door
+        name: "door"
+        type: proportion
+        parent_zone: light
+        proportion: [0.33, 0, 0.66, 0.33]  # [left%, top%, right%, bottom%]
+
+  - id: arena3
+    image: LD.bmp
+    points:
+      top_left: [245, 411]
+      top_right: [558, 404]
+      bottom_left: [249, 558]
+      bottom_right: [556, 557]
+    zones:
+    # Base zone defined by points
+      - id: light
+        name: "light"
+        type: points
+        point_names: ["top_left", "top_right", "bottom_right", "bottom_left"]
+      
+      # Region within other zone
+      - id: door
+        name: "door"
+        type: proportion
+        parent_zone: light
+        proportion: [0.33, 0.66, 0.66, 1]  # [left%, top%, right%, bottom%]
+
+  - id: arena4
+    image: LD.bmp
+    points:
+      top_left: [589, 407]
+      top_right: [911, 413]
+      bottom_left: [593, 560]
+      bottom_right: [910, 562]
+    zones:
+    # Base zone defined by points
+      - id: light
+        name: "light"
+        type: points
+        point_names: ["top_left", "top_right", "bottom_right", "bottom_left"]
+      
+      # Region within other zone
+      - id: door
+        name: "door"
+        type: proportion
+        parent_zone: light
+        proportion: [0.33, 0.66, 0.66, 1]  # [left%, top%, right%, bottom%]
+

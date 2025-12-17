@@ -1,0 +1,46 @@
+arenas:
+  - id: arena1
+    image: NORT.bmp
+    points:
+      top_left: [243, 67]
+      top_right: [563, 55]
+      bottom_left: [253, 373]
+      bottom_right: [566, 376]
+      object_1_top_left: [380, 145]
+      object_1_top_right: [430, 145]
+      object_1_bottom_left: [377, 200]
+      object_1_bottom_right: [433, 200]
+      object_2_top_left: [376, 239]
+      object_2_top_right: [429, 241]
+      object_2_bottom_left: [377, 293]
+      object_2_bottom_right: [429, 296] 
+      
+    zones:
+    # Base zone defined by points
+      - id: arena
+        name: "arena"
+        type: points
+        point_names: ["top_left", "top_right", "bottom_right", "bottom_left"]
+        
+      - id: object_1
+        name: "Object 1"
+        type: points
+        point_names: ["object_1_top_left", "object_1_top_right", "object_1_bottom_right", "object_1_bottom_left"]
+
+      - id: object_1_surround
+        name: "Object 1 Surround"
+        type: proportion
+        parent_zone: object_1
+        proportion: [1.5, 1.5, 1.5, 1.5]  # [left%, top%, right%, bottom%]
+
+      - id: object_2
+        name: "Object 2"
+        type: points
+        point_names: ["object_2_top_left", "object_2_top_right", "object_2_bottom_right", "object_2_bottom_left"]
+
+      - id: object_2_surround
+        name: "Object 2 Surround"
+        type: proportion
+        parent_zone: object_2
+        proportion: [1.5, 1.5, 1.5, 1.5]  # [left%, top%, right%, bottom%]
+
