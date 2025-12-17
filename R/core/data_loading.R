@@ -309,3 +309,366 @@ is_dlc_csv <- function(file_path) {
     return(FALSE)
   })
 }
+
+#' Read Ethovision XT Excel file
+#'
+#' Reads tracking data from an Ethovision XT Excel export file. Ethovision files
+#' have a specific structure with metadata header rows and multiple sheets for
+#' different arenas/subjects.
+#'
+#' The Ethovision Excel format has:
+#' - Row 1: Number of header lines (typically 38)
+#' - Rows 2-36: Metadata (experiment, trial, subject, arena info, etc.)
+#' - Row 37: Column names
+#' - Row 38: Units
+#' - Rows 39+: Tracking data
+#'
+#' Each sheet represents one animal/arena combination. Sheets named with "Control"
+#' are typically not tracking data and are skipped.
+#'
+#' @param file_path Character. Path to the Ethovision Excel file
+#' @param fps Numeric. Frames per second (default: 25, typical for Ethovision)
+#' @param sheet Character or numeric. Specific sheet to read, or NULL for all non-control sheets
+#' @param skip_control Logical. Skip sheets with "Control" in name (default: TRUE)
+#'
+#' @return A list containing:
+#'   \describe{
+#'     \item{data}{Data frame with all tracking data}
+#'     \item{metadata}{List of metadata extracted from header}
+#'     \item{column_info}{Data frame with column names and units}
+#'     \item{fps}{Frames per second}
+#'     \item{n_frames}{Total number of frames}
+#'     \item{filename}{Name of the source file}
+#'     \item{sheet_name}{Name of the sheet}
+#'   }
+#'
+#' @examples
+#' \dontrun{
+#' # Read first non-control sheet
+#' etho_data <- read_ethovision_excel("raw_data.xlsx")
+#'
+#' # Read specific sheet
+#' etho_data <- read_ethovision_excel("raw_data.xlsx", sheet = "Track-Arena 1-Subject 1")
+#'
+#' # Read all sheets (returns list of data)
+#' all_data <- read_ethovision_excel_multi("raw_data.xlsx")
+#' }
+#'
+#' @export
+read_ethovision_excel <- function(file_path, fps = 25, sheet = NULL, skip_control = TRUE) {
+  # Check for readxl package
+  if (!requireNamespace("readxl", quietly = TRUE)) {
+    stop("Package 'readxl' is required to read Ethovision Excel files. Please install it with: install.packages('readxl')",
+         call. = FALSE)
+  }
+
+  # Validate inputs
+  if (!file.exists(file_path)) {
+    stop("File not found: ", file_path,
+         "\nPlease check the file path and try again.", call. = FALSE)
+  }
+
+  if (!is.numeric(fps) || fps <= 0) {
+    stop("fps must be a positive number", call. = FALSE)
+  }
+
+  tryCatch({
+    # Get sheet names
+    all_sheets <- readxl::excel_sheets(file_path)
+
+    # Determine which sheet to read
+    if (is.null(sheet)) {
+      # Find first non-control sheet
+      if (skip_control) {
+        available_sheets <- all_sheets[!grepl("Control", all_sheets, ignore.case = TRUE)]
+      } else {
+        available_sheets <- all_sheets
+      }
+
+      if (length(available_sheets) == 0) {
+        stop("No suitable sheets found in file. Available sheets: ",
+             paste(all_sheets, collapse = ", "), call. = FALSE)
+      }
+
+      sheet_to_read <- available_sheets[1]
+    } else {
+      sheet_to_read <- sheet
+    }
+
+    # Read header information (first 38 rows, no column names)
+    header_raw <- readxl::read_excel(file_path, sheet = sheet_to_read,
+                                     col_names = FALSE, n_max = 38)
+
+    # Extract number of header lines
+    n_header_lines <- as.numeric(header_raw[1, 2])
+    if (is.na(n_header_lines)) {
+      warning("Could not determine number of header lines, using default of 38")
+      n_header_lines <- 38
+    }
+
+    # Extract metadata from header
+    metadata <- list(
+      experiment = as.character(header_raw[2, 2]),
+      trial_name = as.character(header_raw[4, 2]),
+      trial_id = as.character(header_raw[5, 2]),
+      arena_name = as.character(header_raw[6, 2]),
+      arena_id = as.character(header_raw[7, 2]),
+      subject_name = as.character(header_raw[8, 2]),
+      subject_id = as.character(header_raw[9, 2]),
+      start_time = as.character(header_raw[13, 2]),
+      trial_duration = as.character(header_raw[14, 2]),
+      recording_duration = as.character(header_raw[16, 2])
+    )
+
+    # Get column names and units (rows 37 and 38)
+    col_names_raw <- readxl::read_excel(file_path, sheet = sheet_to_read,
+                                        col_names = FALSE, skip = 36, n_max = 2)
+    col_names <- as.character(col_names_raw[1, ])
+    col_units <- as.character(col_names_raw[2, ])
+
+    # Create column info dataframe
+    column_info <- data.frame(
+      column_name = col_names,
+      unit = col_units,
+      stringsAsFactors = FALSE
+    )
+
+    # Read the actual tracking data
+    tracking_data <- readxl::read_excel(file_path, sheet = sheet_to_read,
+                                        skip = n_header_lines, col_names = col_names)
+
+    # Convert "-" to NA (Ethovision uses "-" for missing data)
+    tracking_data <- as.data.frame(lapply(tracking_data, function(col) {
+      if (is.character(col)) {
+        col[col == "-"] <- NA
+        # Try to convert to numeric if possible
+        col_numeric <- suppressWarnings(as.numeric(col))
+        if (!all(is.na(col_numeric))) {
+          return(col_numeric)
+        }
+      }
+      return(col)
+    }))
+
+    # Extract filename
+    filename <- basename(file_path)
+
+    # Package results
+    result <- list(
+      data = tracking_data,
+      metadata = metadata,
+      column_info = column_info,
+      fps = fps,
+      n_frames = nrow(tracking_data),
+      filename = filename,
+      sheet_name = sheet_to_read
+    )
+
+    return(result)
+
+  }, error = function(e) {
+    stop("Failed to read Ethovision Excel file: ", file_path,
+         "\nError: ", conditionMessage(e),
+         "\n\nPlease ensure the file is a valid Ethovision XT Excel export.",
+         call. = FALSE)
+  })
+}
+
+#' Read all sheets from Ethovision XT Excel file
+#'
+#' Reads tracking data from all non-control sheets in an Ethovision Excel file.
+#' Useful for experiments with multiple animals tracked in the same file.
+#'
+#' @param file_path Character. Path to the Ethovision Excel file
+#' @param fps Numeric. Frames per second (default: 25)
+#' @param skip_control Logical. Skip sheets with "Control" in name (default: TRUE)
+#'
+#' @return A named list where each element is the result from read_ethovision_excel()
+#'         for one sheet. Names are the sheet names.
+#'
+#' @examples
+#' \dontrun{
+#' # Read all animals from one file
+#' all_animals <- read_ethovision_excel_multi("experiment_data.xlsx")
+#'
+#' # Access individual animals
+#' animal1 <- all_animals[["Track-Arena 1-Subject 1"]]
+#' }
+#'
+#' @export
+read_ethovision_excel_multi <- function(file_path, fps = 25, skip_control = TRUE) {
+  # Check for readxl package
+  if (!requireNamespace("readxl", quietly = TRUE)) {
+    stop("Package 'readxl' is required. Install with: install.packages('readxl')",
+         call. = FALSE)
+  }
+
+  # Validate file
+  if (!file.exists(file_path)) {
+    stop("File not found: ", file_path, call. = FALSE)
+  }
+
+  # Get all sheets
+  all_sheets <- readxl::excel_sheets(file_path)
+
+  # Filter sheets
+  if (skip_control) {
+    sheets_to_read <- all_sheets[!grepl("Control", all_sheets, ignore.case = TRUE)]
+  } else {
+    sheets_to_read <- all_sheets
+  }
+
+  if (length(sheets_to_read) == 0) {
+    stop("No suitable sheets found in file", call. = FALSE)
+  }
+
+  # Read each sheet
+  results <- list()
+  for (sheet_name in sheets_to_read) {
+    message("Reading sheet: ", sheet_name)
+    results[[sheet_name]] <- read_ethovision_excel(file_path, fps = fps,
+                                                    sheet = sheet_name,
+                                                    skip_control = FALSE)
+  }
+
+  return(results)
+}
+
+#' Parse Ethovision data into structured format
+#'
+#' Converts Ethovision tracking data into a long-format data frame suitable
+#' for conversion to tracking_data format. Extracts X/Y coordinates for all
+#' tracked body parts.
+#'
+#' @param etho_raw List returned by read_ethovision_excel()
+#'
+#' @return A data frame in long format with columns:
+#'   \describe{
+#'     \item{frame}{Frame number (calculated from time and fps)}
+#'     \item{time}{Time in seconds}
+#'     \item{body_part}{Body part name (center, nose, tail, etc.)}
+#'     \item{x}{X coordinate (in cm)}
+#'     \item{y}{Y coordinate (in cm)}
+#'     \item{likelihood}{Always 1.0 for Ethovision (no confidence scores)}
+#'   }
+#'
+#' @examples
+#' \dontrun{
+#' etho_raw <- read_ethovision_excel("data.xlsx", fps = 25)
+#' tracking_df <- parse_ethovision_data(etho_raw)
+#' }
+#'
+#' @export
+parse_ethovision_data <- function(etho_raw) {
+  # Extract components
+  data <- etho_raw$data
+  fps <- etho_raw$fps
+  col_info <- etho_raw$column_info
+
+  # Find time column (usually "Recording time")
+  time_col <- which(col_info$column_name == "Recording time")
+  if (length(time_col) == 0) {
+    time_col <- which(col_info$column_name == "Trial time")
+  }
+  if (length(time_col) == 0) {
+    stop("Could not find time column in Ethovision data", call. = FALSE)
+  }
+
+  time_values <- data[[time_col[1]]]
+
+  # Find all X/Y coordinate pairs
+  # Ethovision typically has: "X center", "Y center", "X nose", "Y nose", "X tail", "Y tail"
+  x_cols <- grep("^X ", col_info$column_name, ignore.case = TRUE)
+  y_cols <- grep("^Y ", col_info$column_name, ignore.case = TRUE)
+
+  if (length(x_cols) == 0 || length(y_cols) == 0) {
+    stop("Could not find X/Y coordinate columns in Ethovision data", call. = FALSE)
+  }
+
+  # Initialize result data frame
+  result <- data.frame()
+
+  # Process each body part
+  for (i in seq_along(x_cols)) {
+    x_idx <- x_cols[i]
+    y_idx <- y_cols[i]
+
+    # Extract body part name from column name (e.g., "X center" -> "center")
+    body_part <- gsub("^X ", "", col_info$column_name[x_idx], ignore.case = TRUE)
+    body_part <- tolower(trimws(body_part))  # Standardize to lowercase
+
+    # Create data frame for this body part
+    bp_data <- data.frame(
+      frame = seq_along(time_values) - 1,  # 0-indexed
+      time = time_values,
+      body_part = body_part,
+      x = as.numeric(data[[x_idx]]),
+      y = as.numeric(data[[y_idx]]),
+      likelihood = 1.0,  # Ethovision doesn't provide likelihood, assume perfect tracking
+      stringsAsFactors = FALSE
+    )
+
+    # Append to result
+    result <- rbind(result, bp_data)
+  }
+
+  # Ensure frame is integer
+  result$frame <- as.integer(result$frame)
+
+  # Order by frame and body part
+  result <- result[order(result$frame, result$body_part), ]
+  rownames(result) <- NULL
+
+  return(result)
+}
+
+#' Check if file is an Ethovision Excel file
+#'
+#' Attempts to determine if a file is an Ethovision Excel file based on
+#' file extension and header structure.
+#'
+#' @param file_path Character. Path to the file to check
+#'
+#' @return Logical. TRUE if file appears to be Ethovision format, FALSE otherwise
+#'
+#' @examples
+#' \dontrun{
+#' if (is_ethovision_excel("data.xlsx")) {
+#'   data <- read_ethovision_excel("data.xlsx")
+#' }
+#' }
+#'
+#' @export
+is_ethovision_excel <- function(file_path) {
+  if (!file.exists(file_path)) {
+    return(FALSE)
+  }
+
+  # Check file extension
+  if (!grepl("\\.xlsx?$", file_path, ignore.case = TRUE)) {
+    return(FALSE)
+  }
+
+  # Check for readxl package
+  if (!requireNamespace("readxl", quietly = TRUE)) {
+    return(FALSE)
+  }
+
+  tryCatch({
+    # Read first few rows
+    header <- readxl::read_excel(file_path, sheet = 1, col_names = FALSE, n_max = 5)
+
+    # Check if first row has "Number of header lines:"
+    first_cell <- as.character(header[1, 1])
+    has_header_marker <- grepl("Number of header lines", first_cell, ignore.case = TRUE)
+
+    # Check if second row has "Experiment"
+    second_cell <- as.character(header[2, 1])
+    has_experiment <- grepl("Experiment", second_cell, ignore.case = TRUE)
+
+    return(has_header_marker && has_experiment)
+
+  }, error = function(e) {
+    return(FALSE)
+  })
+}
