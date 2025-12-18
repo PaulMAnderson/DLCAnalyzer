@@ -50,6 +50,7 @@ source_files <- c(
   # Metrics
   "R/metrics/zone_analysis.R",
   "R/metrics/time_in_zone.R",
+  "R/metrics/movement_metrics.R",
 
   # Reporting and Visualization
   "R/reporting/generate_report.R",
