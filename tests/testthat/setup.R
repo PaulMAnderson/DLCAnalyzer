@@ -51,6 +51,10 @@ source_files <- c(
   "R/metrics/zone_analysis.R",
   "R/metrics/time_in_zone.R",
 
+  # Reporting and Visualization
+  "R/reporting/generate_report.R",
+  "R/visualization/plot_tracking.R",
+
   # Utilities
   "R/utils/config_utils.R"
 )

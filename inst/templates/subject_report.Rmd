@@ -1,0 +1,284 @@
+---
+title: "DLC Analysis Report: `r params$subject_id`"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+    code_folding: hide
+params:
+  subject_id: "Unknown"
+  paradigm: "Unknown"
+  date: !r Sys.Date()
+  fps: 30
+  n_frames: 0
+  duration: 0
+  quality_summary: NULL
+  occupancy: NULL
+  entries: NULL
+  exits: NULL
+  latency: NULL
+  transitions: NULL
+  plot_files: NULL
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(knitr)
+library(ggplot2)
+```
+
+# Session Information
+
+<div class="well">
+- **Subject ID**: `r params$subject_id`
+- **Paradigm**: `r params$paradigm`
+- **Analysis Date**: `r format(params$date, '%B %d, %Y')`
+- **Recording Duration**: `r round(params$duration, 2)` seconds (`r params$n_frames` frames at `r params$fps` fps)
+- **Total Recording Time**: `r sprintf("%.2f minutes", params$duration / 60)`
+</div>
+
+---
+
+# Data Quality Assessment
+
+```{r quality-check}
+if (!is.null(params$quality_summary)) {
+  kable(params$quality_summary, caption = "Quality Metrics Summary")
+} else {
+  cat("Quality assessment data not available.\n")
+}
+```
+
+---
+
+# Zone Occupancy Analysis
+
+## Summary Statistics
+
+```{r occupancy-table}
+if (!is.null(params$occupancy)) {
+  occupancy_display <- params$occupancy
+
+  # Format numeric columns
+  if ("time_in_zone" %in% names(occupancy_display)) {
+    occupancy_display$time_in_zone <- round(occupancy_display$time_in_zone, 2)
+  }
+  if ("percentage" %in% names(occupancy_display)) {
+    occupancy_display$percentage <- round(occupancy_display$percentage, 2)
+  }
+
+  kable(occupancy_display,
+        caption = "Time spent in each zone",
+        col.names = c("Zone", "Time (s)", "Percentage (%)", "Entry Count"))
+} else {
+  cat("Zone occupancy data not available.\n")
+}
+```
+
+## Visualization
+
+```{r occupancy-plot, fig.width=10, fig.height=6}
+if (!is.null(params$plot_files) && "occupancy" %in% names(params$plot_files)) {
+  if (file.exists(params$plot_files$occupancy)) {
+    knitr::include_graphics(params$plot_files$occupancy)
+  } else {
+    cat("Occupancy plot file not found.\n")
+  }
+} else {
+  cat("Occupancy visualization not available.\n")
+}
+```
+
+---
+
+# Zone Entry/Exit Analysis
+
+## Entry Statistics
+
+```{r entries-table}
+if (!is.null(params$entries)) {
+  entries_display <- params$entries
+
+  # Format numeric columns
+  numeric_cols <- c("n_entries", "mean_duration", "total_time", "latency_to_first")
+  for (col in numeric_cols) {
+    if (col %in% names(entries_display)) {
+      entries_display[[col]] <- round(entries_display[[col]], 2)
+    }
+  }
+
+  kable(entries_display,
+        caption = "Zone entry statistics",
+        col.names = c("Zone", "Number of Entries", "Mean Duration (s)",
+                     "Total Time (s)", "Latency to First Entry (s)"))
+} else {
+  cat("Zone entry data not available.\n")
+}
+```
+
+## Exit Statistics
+
+```{r exits-table}
+if (!is.null(params$exits)) {
+  exits_display <- params$exits
+
+  # Format numeric columns
+  if ("n_exits" %in% names(exits_display)) {
+    exits_display$n_exits <- round(exits_display$n_exits, 0)
+  }
+
+  kable(exits_display,
+        caption = "Zone exit counts",
+        col.names = c("Zone", "Number of Exits"))
+} else {
+  cat("Zone exit data not available.\n")
+}
+```
+
+---
+
+# Zone Latency Analysis
+
+```{r latency-table}
+if (!is.null(params$latency)) {
+  latency_display <- params$latency
+
+  # Format numeric columns
+  if ("latency" %in% names(latency_display)) {
+    latency_display$latency <- round(latency_display$latency, 2)
+  }
+
+  kable(latency_display,
+        caption = "Latency to first entry into each zone",
+        col.names = c("Zone", "Latency (s)", "First Entry Frame"))
+} else {
+  cat("Zone latency data not available.\n")
+}
+```
+
+**Interpretation**: Latency represents the time (in seconds) from the start of the recording until the animal first entered each zone. Lower latency indicates quicker exploration or preference for a zone.
+
+---
+
+# Zone Transitions
+
+```{r transitions-summary}
+if (!is.null(params$transitions)) {
+  cat("Total number of zone transitions: ",
+      sum(params$transitions$n_transitions, na.rm = TRUE), "\n\n")
+}
+```
+
+```{r transitions-plot, fig.width=10, fig.height=8}
+if (!is.null(params$plot_files) && "transitions" %in% names(params$plot_files)) {
+  if (file.exists(params$plot_files$transitions)) {
+    knitr::include_graphics(params$plot_files$transitions)
+  } else {
+    cat("Transitions plot file not found.\n")
+  }
+} else {
+  cat("Zone transitions visualization not available.\n")
+}
+```
+
+```{r transitions-table}
+if (!is.null(params$transitions)) {
+  transitions_display <- params$transitions
+
+  # Format and display top transitions
+  transitions_display <- transitions_display[order(-transitions_display$n_transitions), ]
+
+  kable(head(transitions_display, 20),
+        caption = "Top 20 zone transitions",
+        col.names = c("From Zone", "To Zone", "Number of Transitions"),
+        row.names = FALSE)
+} else {
+  cat("Zone transition data not available.\n")
+}
+```
+
+---
+
+# Spatial Analysis
+
+## Movement Trajectory
+
+```{r trajectory-plot, fig.width=10, fig.height=8}
+if (!is.null(params$plot_files) && "trajectory" %in% names(params$plot_files)) {
+  if (file.exists(params$plot_files$trajectory)) {
+    knitr::include_graphics(params$plot_files$trajectory)
+  } else {
+    cat("Trajectory plot file not found.\n")
+  }
+} else {
+  cat("Trajectory visualization not available.\n")
+}
+```
+
+**Interpretation**: The trajectory plot shows the animal's path through the arena. The green point indicates the start position, and the red point indicates the end position. If colored by time, the gradient shows progression from start (dark) to end (light).
+
+## Position Heatmap
+
+```{r heatmap, fig.width=10, fig.height=8}
+if (!is.null(params$plot_files) && "heatmap" %in% names(params$plot_files)) {
+  if (file.exists(params$plot_files$heatmap)) {
+    knitr::include_graphics(params$plot_files$heatmap)
+  } else {
+    cat("Heatmap file not found.\n")
+  }
+} else {
+  cat("Heatmap visualization not available.\n")
+}
+```
+
+**Interpretation**: The heatmap shows the density of the animal's position over time. Warmer colors (yellow/white) indicate areas where the animal spent more time, while cooler colors (purple/blue) indicate less time spent.
+
+---
+
+# Appendix: Raw Metrics
+
+## Zone Occupancy (Raw Data)
+
+```{r raw-occupancy}
+if (!is.null(params$occupancy)) {
+  kable(params$occupancy, caption = "Complete zone occupancy data")
+}
+```
+
+## Zone Entries (Raw Data)
+
+```{r raw-entries}
+if (!is.null(params$entries)) {
+  kable(params$entries, caption = "Complete zone entry data")
+}
+```
+
+## Zone Transitions (Raw Data)
+
+```{r raw-transitions}
+if (!is.null(params$transitions)) {
+  kable(params$transitions, caption = "Complete zone transition data")
+}
+```
+
+---
+
+# Session Information
+
+This report was generated using DLCAnalyzer.
+
+```{r session-info}
+cat("Generated on:", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n")
+cat("R version:", R.version.string, "\n")
+```
+
+---
+
+<div style="text-align: center; margin-top: 50px; padding: 20px; background-color: #f8f9fa; border-radius: 5px;">
+**End of Report**
+
+Generated with [DLCAnalyzer](https://github.com/yourusername/DLCAnalyzer)
+</div>
