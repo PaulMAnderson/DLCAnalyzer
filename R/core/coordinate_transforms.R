@@ -48,8 +48,8 @@ calculate_scale_from_points <- function(point1, point2, real_distance_cm) {
     stop("Points are identical, cannot calculate scale", call. = FALSE)
   }
 
-  # Calculate pixels per cm
-  pixels_per_cm <- pixel_distance / real_distance_cm
+  # Calculate pixels per cm (remove names to return unnamed numeric)
+  pixels_per_cm <- as.numeric(pixel_distance / real_distance_cm)
 
   return(pixels_per_cm)
 }

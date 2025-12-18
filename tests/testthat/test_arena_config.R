@@ -59,9 +59,13 @@ test_that("validate_arena_config accepts valid configuration", {
 })
 
 test_that("validate_arena_config rejects invalid configurations", {
-  # Missing ID
+  # Missing ID - must create object with class first
+  arena_no_id <- structure(
+    list(id = NULL),
+    class = "arena_config"
+  )
   expect_error(
-    validate_arena_config(list(class = "arena_config")),
+    validate_arena_config(arena_no_id),
     "must have a character 'id' field"
   )
 

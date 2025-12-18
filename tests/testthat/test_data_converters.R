@@ -93,12 +93,13 @@ test_that("infer_arena_dimensions calculates correct dimensions", {
 
   dims <- infer_arena_dimensions(tracking_df)
 
-  # Max x is 220, max y is 320
-  # With 10% buffer: width ~ 242, height ~ 352
-  expect_true(dims$width >= 220)
-  expect_true(dims$height >= 320)
-  expect_true(dims$width <= 250)
-  expect_true(dims$height <= 360)
+  # x range: [100, 220] → span = 120
+  # y range: [200, 320] → span = 120
+  # With 10% buffer: width = ceiling(120 + 24) = 144, height = 144
+  expect_true(dims$width >= 140)
+  expect_true(dims$height >= 140)
+  expect_true(dims$width <= 150)
+  expect_true(dims$height <= 150)
 })
 
 test_that("extract_subject_id_from_filename works with common patterns", {

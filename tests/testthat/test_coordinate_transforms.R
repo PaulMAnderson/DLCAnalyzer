@@ -42,7 +42,7 @@ test_that("calculate_scale_from_points validates inputs", {
 
   # Zero distance
   expect_error(
-    calculate_scale_from_points(c(0, 0), 0),
+    calculate_scale_from_points(p1, p2, 0),
     "must be a positive number"
   )
 

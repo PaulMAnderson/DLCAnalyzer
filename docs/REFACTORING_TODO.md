@@ -145,7 +145,7 @@ ead_dlc_csv(file_path, ...)
 - Converts DLC data to valid 	racking_data object
 - Correctly identifies and separates maze/reference points from body points
 - Handles cases where reference points are missing
-- Validates output using alidate_tracking_data()
+- Validates output using validate_tracking_data()
 
 **Function Signature**:
 \\\
@@ -221,7 +221,7 @@ ead_config(config_file)
 **Tasks**:
 - [ ] Create file: R/core/preprocessing.R
 - [ ] Extract likelihood filtering from legacy code
-- [ ] Implement: ilter_low_confidence(data, threshold)
+- [ ] Implement: filter_low_confidence(data, threshold)
 - [ ] Implement: interpolate_missing(data, method, max_gap)
 - [ ] Implement: smooth_trajectory(data, method, window, ...)
 - [ ] Support multiple smoothing methods (Savitzky-Golay, moving average, etc.)
@@ -282,7 +282,7 @@ otate_coordinates(data, angle, center)
 - [ ] Implement: check_tracking_quality(data)
 - [ ] Implement: detect_outliers(data, method, threshold)
 - [ ] Implement: calculate_missing_data_summary(data)
-- [ ] Implement: lag_suspicious_jumps(data, max_displacement)
+- [ ] Implement: flag_suspicious_jumps(data, max_displacement)
 - [ ] Create quality report generator
 - [ ] Add visualization for quality metrics
 - [ ] Write tests
@@ -379,10 +379,10 @@ otate_coordinates(data, angle, center)
 
 **Tasks**:
 - [ ] Create file: R/utils/config_validation.R
-- [ ] Implement: alidate_arena_config(config)
-- [ ] Implement: alidate_preprocessing_config(config)
-- [ ] Implement: alidate_metrics_config(config)
-- [ ] Implement: alidate_body_parts(config, available_parts)
+- [ ] Implement: validate_arena_config(config)
+- [ ] Implement: validate_preprocessing_config(config)
+- [ ] Implement: validate_metrics_config(config)
+- [ ] Implement: validate_body_parts(config, available_parts)
 - [ ] Provide informative error messages
 - [ ] Write validation tests
 - [ ] Document required/optional fields
@@ -406,7 +406,7 @@ otate_coordinates(data, angle, center)
 **Tasks**:
 - [ ] Create file: R/paradigms/open_field.R
 - [ ] Implement: setup_open_field_arena(width, height, center_proportion)
-- [ ] Implement: alidate_open_field_config(config)
+- [ ] Implement: validate_open_field_config(config)
 - [ ] Implement: calculate_open_field_metrics(data, config)
 - [ ] Define standard zones (center, periphery, corners)
 - [ ] Implement thigmotaxis calculation
@@ -440,7 +440,7 @@ otate_coordinates(data, angle, center)
 **Tasks**:
 - [ ] Create file: R/paradigms/elevated_plus_maze.R
 - [ ] Implement: setup_epm_arena(arm_length, arm_width, center_size)
-- [ ] Implement: alidate_epm_config(config)
+- [ ] Implement: validate_epm_config(config)
 - [ ] Implement: calculate_epm_metrics(data, config)
 - [ ] Define EPM zones (open arms, closed arms, center)
 - [ ] Implement arm entry detection
@@ -476,7 +476,7 @@ otate_coordinates(data, angle, center)
 **Tasks**:
 - [ ] Create file: R/paradigms/novel_object.R
 - [ ] Implement: setup_nor_arena(width, height, object_zones)
-- [ ] Implement: alidate_nor_config(config)
+- [ ] Implement: validate_nor_config(config)
 - [ ] Implement: calculate_nor_metrics(data, config)
 - [ ] Define object interaction zones
 - [ ] Implement: detect_object_investigation(data, object_zone, body_part)
@@ -511,7 +511,7 @@ otate_coordinates(data, angle, center)
 **Tasks**:
 - [ ] Create file: R/paradigms/light_dark_box.R
 - [ ] Implement: setup_ldb_arena(total_width, light_proportion)
-- [ ] Implement: alidate_ldb_config(config)
+- [ ] Implement: validate_ldb_config(config)
 - [ ] Implement: calculate_ldb_metrics(data, config)
 - [ ] Define light and dark zones
 - [ ] Implement transition detection
@@ -904,3 +904,174 @@ Before marking a task complete:
 **Document Version**: 1.0  
 **Last Updated**: 2024  
 **Status**: ACTIVE
+
+---
+
+## PHASE 2.5: Infrastructure and Reporting (New)
+
+### 2.10 Fix Test Infrastructure  
+**Priority**: HIGH
+**Estimated Time**: 2 hours
+**Dependencies**: None
+**Status**: [ ]
+
+**Tasks**:
+- [ ] Create file: tests/testthat/setup.R to source all R files automatically
+- [ ] Document in tests/README.md how to run tests properly
+- [ ] Create convenience script: tests/run_all_tests.R
+- [ ] Verify all 483 tests pass (375 existing + 108 new from Tasks 2.5-2.6)
+
+**Acceptance Criteria**:
+- Running `Rscript -e "library(testthat); test_dir('tests/testthat')"` works without manual sourcing
+- Clear documentation exists for running tests
+- CI/CD ready test structure
+
+**AI Agent Instructions**:
+The setup.R file should source all files from R/core/, R/metrics/, R/utils/ automatically using:
+```r
+# Source all R files needed for tests
+source_files <- c(
+  # Core
+  "R/core/data_structures.R",
+  "R/core/data_loading.R",
+  "R/core/data_converters.R",
+  "R/core/arena_config.R",
+  "R/core/zone_geometry.R",
+  "R/core/coordinate_transforms.R",
+  "R/core/preprocessing.R",
+  "R/core/quality_checks.R",
+  # Metrics
+  "R/metrics/zone_analysis.R",
+  "R/metrics/time_in_zone.R",
+  # Utils
+  "R/utils/config_utils.R"
+)
+
+for (file in source_files) {
+  source(file)
+}
+```
+
+---
+
+### 2.11 Add Real Data Integration Tests for All Paradigms
+**Priority**: MEDIUM
+**Estimated Time**: 4 hours
+**Dependencies**: 2.5, 2.6
+**Status**: [ ]
+
+**Tasks**:
+- [ ] Create directory: tests/integration/
+- [ ] Create test: tests/integration/test_epm_real_data.R (already have code, formalize it)
+- [ ] Create test: tests/integration/test_oft_real_data.R (Open Field Test)
+- [ ] Create test: tests/integration/test_nort_real_data.R (Novel Object Recognition)
+- [ ] Create test: tests/integration/test_ld_real_data.R (Light/Dark Box)
+- [ ] Create test: tests/integration/test_fst_real_data.R (Forced Swim Test)
+- [ ] Document expected outputs for each paradigm
+- [ ] Add README.md in tests/integration/ explaining the tests
+
+**Available Real Data**:
+- EPM: `data/EPM/Example DLC Data/*.csv` (4 files, already tested)
+- LD:  `data/LD/Example Exported Data/*.csv` 
+- OFT: `data/OFT/Example Exported Data/*.csv`
+- NORT: `data/NORT/Example Exported Data/*.csv`
+
+**Acceptance Criteria**:
+- All available real data files are tested
+- Tests verify zone analysis works correctly for each paradigm
+- Integration tests document expected zone occupancy patterns
+- Tests can run independently or as part of full suite
+
+---
+
+### 2.12 Build Reporting and Visualization System
+**Priority**: HIGH
+**Estimated Time**: 8 hours
+**Dependencies**: 2.5, 2.6
+**Status**: [ ]
+
+**Tasks**:
+- [ ] Create file: R/reporting/generate_report.R
+- [ ] Implement: generate_subject_report(tracking_data, arena, output_dir)
+- [ ] Implement: generate_group_report(tracking_data_list, arena, group_info, output_dir)
+- [ ] Implement: compare_subjects(subject_list, metrics, output_file)
+- [ ] Implement: compare_groups(group_a, group_b, test_type = "t.test", output_file)
+- [ ] Create file: R/visualization/plot_tracking.R
+- [ ] Implement: plot_heatmap(tracking_data, arena, body_part)
+- [ ] Implement: plot_trajectory(tracking_data, arena, body_part, color_by_time = TRUE)
+- [ ] Implement: plot_zone_occupancy(occupancy_data, plot_type = "bar")
+- [ ] Implement: plot_zone_transitions(transition_data, plot_type = "network")
+- [ ] Create file: R/visualization/plot_comparisons.R
+- [ ] Implement: plot_group_comparison(metric_data, groups, test_results)
+- [ ] Implement: plot_metric_distribution(metric_data, by_group = TRUE)
+- [ ] Write comprehensive documentation with examples
+- [ ] Create example report templates in inst/templates/
+
+**Report Output Format**:
+- HTML reports with embedded plots (using R Markdown)
+- PDF reports for publication
+- CSV files with all metrics for further analysis
+- PNG/SVG plots for presentations
+
+**Comparison Features**:
+- Compare individual animals (e.g., pre vs. post treatment)
+- Compare groups (e.g., control vs. treatment)
+- Statistical tests: t-test, ANOVA, non-parametric alternatives
+- Effect size calculations (Cohen's d, eta-squared)
+- Multiple comparison corrections (Bonferroni, FDR)
+
+**Visualization Features**:
+- Heatmaps showing spatial occupancy
+- Trajectory plots with time-based coloring
+- Zone occupancy bar charts and pie charts
+- Transition diagrams/network graphs
+- Group comparison plots with error bars
+- Distribution plots (histograms, violin plots, box plots)
+
+**Acceptance Criteria**:
+- Generate comprehensive HTML report for single subject
+- Generate comparison report for multiple subjects
+- Generate group analysis report with statistics
+- All plots are publication-ready with proper labels and legends
+- Reports include both summary statistics and raw data tables
+- Example reports generated for EPM, OFT, and other paradigms
+
+**AI Agent Instructions**:
+Use ggplot2 for visualization, rmarkdown for report generation.
+Reports should include:
+1. Session metadata (subject ID, date, paradigm, etc.)
+2. Data quality metrics (from Task 2.3)
+3. Zone occupancy summary (from Task 2.5)
+4. Zone entry/exit/latency statistics (from Task 2.6)
+5. Trajectory heatmap and path plot
+6. Statistical comparisons if multiple subjects/groups
+7. Raw data tables as appendix
+
+---
+
+### 2.13 Create Analysis Workflows
+**Priority**: MEDIUM
+**Estimated Time**: 4 hours
+**Dependencies**: 2.12
+**Status**: [ ]
+
+**Tasks**:
+- [ ] Create file: workflows/analyze_single_subject.R
+- [ ] Create file: workflows/analyze_experiment.R
+- [ ] Create file: workflows/compare_groups.R
+- [ ] Add command-line interface support (using optparse or similar)
+- [ ] Create example configuration files in config/analysis_parameters/
+- [ ] Document workflows in docs/WORKFLOW_GUIDE.md
+
+**Workflow Features**:
+- Single subject: Load → QC → Metrics → Report
+- Experiment: Load all → QC → Metrics → Individual reports → Group comparisons
+- Batch processing: Process entire directory of DLC outputs
+
+**Acceptance Criteria**:
+- Workflows can be run from command line
+- Progress indicators for long-running analyses
+- Error handling and logging
+- Configuration-driven (YAML files)
+- Examples work with provided test data
+

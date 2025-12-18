@@ -181,8 +181,8 @@ create_circle_zone <- function(zone, arena) {
   structure(
     list(
       type = "circle",
-      center_x = center["x"],
-      center_y = center["y"],
+      center_x = as.numeric(center["x"]),
+      center_y = as.numeric(center["y"]),
       radius = radius_pixels
     ),
     class = "zone_geometry"

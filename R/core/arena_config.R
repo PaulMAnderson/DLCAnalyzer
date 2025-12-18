@@ -223,7 +223,7 @@ print.arena_config <- function(x, ...) {
   }
 
   if (!is.null(x$scale)) {
-    cat("Scale:   ", x$scale, " pixels/cm\n")
+    cat("Scale:   ", x$scale, " pixels/cm\n", sep = "")
   }
 
   cat("\n")
