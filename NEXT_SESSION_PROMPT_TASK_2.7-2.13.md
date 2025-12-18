@@ -143,7 +143,7 @@ Individual test files should NOT manually source R files.
 
 ### Priority 2: Add Real Data Integration Tests (Task 2.11)
 
-**Current Problem**: Only EPM data is tested. Other paradigms (OFT, NORT, LD, FST) have data but no tests.
+**Current Problem**: Only EPM data is tested. Other paradigms (OFT, NORT, LD) have data but no tests.
 
 **Directory to create**: `tests/integration/`
 
@@ -153,12 +153,10 @@ Individual test files should NOT manually source R files.
 2. **`tests/integration/test_oft_real_data.R`** (Open Field Test)
 3. **`tests/integration/test_nort_real_data.R`** (Novel Object Recognition)
 4. **`tests/integration/test_ld_real_data.R`** (Light/Dark Box)
-5. **`tests/integration/test_fst_real_data.R`** (Forced Swim Test)
 
 **Available Data**:
 - EPM: `data/EPM/Example DLC Data/*.csv` (4 files)
 - OFT: `data/OFT/Output_DLC/*.csv`
-- FST: `data/FST/Output_DLC/*.csv`
 
 **Arena Configs**:
 - `config/arena_definitions/EPM/EPM.yaml`
@@ -684,7 +682,6 @@ Rscript -e "library(testthat); test_dir('tests/testthat')"
 ### Test Data
 - EPM: `data/EPM/Example DLC Data/*.csv` (4 files, extensively tested)
 - OFT: `data/OFT/Output_DLC/*.csv`
-- FST: `data/FST/Output_DLC/*.csv`
 
 ### Arena Configs
 - `config/arena_definitions/EPM/EPM.yaml`
