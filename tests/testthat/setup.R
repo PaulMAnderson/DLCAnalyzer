@@ -54,6 +54,7 @@ source_files <- c(
 
   # Reporting and Visualization
   "R/reporting/generate_report.R",
+  "R/reporting/group_comparisons.R",
   "R/visualization/plot_tracking.R",
 
   # Utilities

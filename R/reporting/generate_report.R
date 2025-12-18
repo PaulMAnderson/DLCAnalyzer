@@ -325,48 +325,117 @@ print.dlc_report <- function(x, ...) {
 #' @export
 generate_group_report <- function(tracking_data_list, arena_config,
                                  group_info, output_dir = "reports",
-                                 comparisons = NULL, format = "html") {
-  stop("Group comparison reports not yet implemented. This will be added in a future version.")
-  # TODO: Implement in Phase 3
+                                 comparisons = NULL, format = "html",
+                                 body_part = "mouse_center",
+                                 scale_factor = NULL) {
+  # Validate inputs
+  if (!is.list(tracking_data_list) || length(tracking_data_list) == 0) {
+    stop("tracking_data_list must be a non-empty list of tracking_data objects")
+  }
+
+  if (!is.data.frame(group_info)) {
+    stop("group_info must be a data frame")
+  }
+
+  if (!"subject_id" %in% names(group_info) || !"group" %in% names(group_info)) {
+    stop("group_info must contain 'subject_id' and 'group' columns")
+  }
+
+  # Create output directory
+  if (!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+  }
+
+  message("Generating group comparison report...")
+
+  # Extract metrics for each subject
+  message("  - Extracting metrics for each subject...")
+  all_metrics <- lapply(seq_along(tracking_data_list), function(i) {
+    tryCatch({
+      extract_all_metrics(tracking_data_list[[i]], arena_config,
+                         body_part, scale_factor)
+    }, error = function(e) {
+      warning(sprintf("Failed to extract metrics for subject %d: %s", i, e$message))
+      NULL
+    })
+  })
+
+  # Filter out failed extractions
+  all_metrics <- all_metrics[!sapply(all_metrics, is.null)]
+
+  if (length(all_metrics) == 0) {
+    stop("Failed to extract metrics for any subject")
+  }
+
+  # Add subject IDs to metrics
+  for (i in seq_along(all_metrics)) {
+    all_metrics[[i]]$subject_id <- group_info$subject_id[i]
+    all_metrics[[i]]$group <- group_info$group[i]
+  }
+
+  # Combine all metrics
+  combined_metrics <- do.call(rbind, all_metrics)
+
+  # Save combined metrics
+  metrics_file <- file.path(output_dir, "group_metrics.csv")
+  write.csv(combined_metrics, metrics_file, row.names = FALSE)
+  message(sprintf("  - Saved combined metrics to: %s", metrics_file))
+
+  # Perform group comparisons
+  message("  - Performing statistical comparisons...")
+  comparison_results <- list()
+
+  if (is.null(comparisons)) {
+    # Compare all unique groups pairwise
+    unique_groups <- unique(group_info$group)
+    if (length(unique_groups) == 2) {
+      comparisons <- list(c(unique_groups[1], unique_groups[2]))
+    } else if (length(unique_groups) > 2) {
+      message("  - More than 2 groups detected. Specify comparisons parameter for pairwise tests")
+    }
+  }
+
+  if (!is.null(comparisons)) {
+    for (comp in comparisons) {
+      group_a_name <- comp[1]
+      group_b_name <- comp[2]
+
+      # Get metrics for each group
+      group_a_metrics <- all_metrics[group_info$group == group_a_name]
+      group_b_metrics <- all_metrics[group_info$group == group_b_name]
+
+      if (length(group_a_metrics) > 0 && length(group_b_metrics) > 0) {
+        comp_result <- compare_groups(group_a_metrics, group_b_metrics,
+                                     group_a_name, group_b_name,
+                                     test_type = "t.test",
+                                     correction = "fdr")
+
+        comparison_results[[paste(group_a_name, "vs", group_b_name)]] <- comp_result
+
+        # Save comparison results
+        comp_file <- file.path(output_dir,
+                              sprintf("comparison_%s_vs_%s.csv",
+                                    group_a_name, group_b_name))
+        write.csv(comp_result, comp_file, row.names = FALSE)
+        message(sprintf("  - Saved comparison: %s", comp_file))
+      }
+    }
+  }
+
+  message("Group comparison report complete!")
+
+  # Return result
+  result <- list(
+    output_dir = output_dir,
+    metrics_file = metrics_file,
+    comparison_files = comparison_results,
+    combined_metrics = combined_metrics
+  )
+
+  class(result) <- "dlc_group_report"
+  return(result)
 }
 
 
-#' Compare subjects
-#'
-#' Statistical comparison of metrics between subjects
-#'
-#' @param subject_list List of subject IDs or tracking_data objects
-#' @param metrics Character vector of metrics to compare (default: "all")
-#' @param test_type Statistical test: "t.test", "wilcox.test", "anova"
-#' @param output_file Output CSV file path
-#'
-#' @return Data frame with comparison results
-#'
-#' @export
-compare_subjects <- function(subject_list, metrics = "all",
-                            test_type = "t.test", output_file = NULL) {
-  stop("Subject comparison not yet implemented. This will be added in a future version.")
-  # TODO: Implement in Phase 3
-}
-
-
-#' Compare groups
-#'
-#' Statistical comparison between groups
-#'
-#' @param group_a Vector of subject IDs in group A
-#' @param group_b Vector of subject IDs in group B
-#' @param metrics Metrics to compare (default: "all")
-#' @param test_type Statistical test type (default: "t.test")
-#' @param correction Multiple comparison correction: "bonferroni", "fdr", "none"
-#' @param output_file Output file path
-#'
-#' @return Data frame with test results and effect sizes
-#'
-#' @export
-compare_groups <- function(group_a, group_b, metrics = "all",
-                          test_type = "t.test", correction = "fdr",
-                          output_file = NULL) {
-  stop("Group comparison not yet implemented. This will be added in a future version.")
-  # TODO: Implement in Phase 3
-}
+# Note: compare_subjects and compare_groups functions are now in
+# R/reporting/group_comparisons.R
