@@ -87,7 +87,7 @@ if (!file.exists(arena_config_file)) {
     )
   )
 } else {
-  arena <- load_arena_configs(arena_config_file, arena_id = "of_standard")
+  arena <- load_arena_configs(arena_config_file, arena_id = "arena1")
 }
 
 cat(sprintf("  Zones: %s\n", paste(names(arena$zones), collapse = ", ")))
@@ -98,7 +98,7 @@ cat(sprintf("  Zones: %s\n", paste(names(arena$zones), collapse = ", ")))
 
 cat("\n=== STEP 2: Quality Assessment ===\n")
 
-quality <- assess_tracking_quality(tracking_data, body_part = body_part)
+quality <- check_tracking_quality(tracking_data, body_part = body_part)
 
 cat(sprintf("  Overall quality: %.2f%%\n", quality$overall_quality * 100))
 cat(sprintf("  Missing data: %.2f%%\n", quality$missing_pct))

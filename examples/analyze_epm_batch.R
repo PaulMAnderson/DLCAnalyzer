@@ -45,7 +45,7 @@ for (i in seq_along(dlc_files)) {
 
 # Load arena configuration once
 cat("\nLoading arena configuration...\n")
-arena <- load_arena_configs(arena_config, arena_id = "epm_standard")
+arena <- load_arena_configs(arena_config, arena_id = "arena1")
 
 # ============================================================================
 # PROCESS EACH SUBJECT
@@ -75,7 +75,7 @@ for (i in seq_along(dlc_files)) {
     )
 
     # Quality check
-    quality <- assess_tracking_quality(tracking_data, body_part = body_part)
+    quality <- check_tracking_quality(tracking_data, body_part = body_part)
     cat(sprintf("  Quality: %.1f%%\n", quality$overall_quality * 100))
 
     # Calculate metrics

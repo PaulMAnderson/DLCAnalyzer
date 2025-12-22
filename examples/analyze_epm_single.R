@@ -59,7 +59,7 @@ cat(sprintf("  Body parts: %s\n",
 cat(sprintf("\nLoading arena config: %s\n", basename(arena_config_file)))
 arena <- load_arena_configs(
   arena_config_file,
-  arena_id = "epm_standard"
+  arena_id = "arena1"
 )
 
 cat(sprintf("  Arena dimensions: %.1f x %.1f pixels\n",
@@ -75,7 +75,7 @@ cat(sprintf("  Zones defined: %s\n",
 cat("\n=== STEP 2: Quality Assessment ===\n")
 
 # Assess tracking quality
-quality <- assess_tracking_quality(
+quality <- check_tracking_quality(
   tracking_data,
   body_part = body_part
 )

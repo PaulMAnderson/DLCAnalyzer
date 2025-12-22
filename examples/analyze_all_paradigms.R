@@ -41,7 +41,7 @@ process_epm_data <- function() {
   }
 
   arena <- load_arena_configs("config/arena_definitions/EPM/EPM.yaml",
-                              arena_id = "epm_standard")
+                              arena_id = "arena1")
 
   results <- list()
 
@@ -97,7 +97,7 @@ process_oft_data <- function() {
   # Create or load arena config
   arena_file <- "config/arena_definitions/OF/of_standard.yaml"
   if (file.exists(arena_file)) {
-    arena <- load_arena_configs(arena_file, arena_id = "of_standard")
+    arena <- load_arena_configs(arena_file, arena_id = "arena1")
   } else {
     arena <- new_arena_config(
       arena_id = "of_default",
@@ -160,7 +160,7 @@ process_nort_data <- function() {
   # Create or load arena config
   arena_file <- "config/arena_definitions/NORT/nort_standard.yaml"
   if (file.exists(arena_file)) {
-    arena <- load_arena_configs(arena_file, arena_id = "nort_standard")
+    arena <- load_arena_configs(arena_file, arena_id = "arena1")
   } else {
     arena <- new_arena_config(
       arena_id = "nort_default",
@@ -234,7 +234,7 @@ process_ld_data <- function() {
   # Create or load arena config
   arena_file <- "config/arena_definitions/LD/ld_standard.yaml"
   if (file.exists(arena_file)) {
-    arena <- load_arena_configs(arena_file, arena_id = "ld_standard")
+    arena <- load_arena_configs(arena_file, arena_id = "arena1")
   } else {
     arena <- new_arena_config(
       arena_id = "ld_default",
