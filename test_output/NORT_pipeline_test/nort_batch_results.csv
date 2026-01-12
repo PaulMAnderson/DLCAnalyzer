@@ -1,0 +1,2 @@
+"arena_name","arena_id","subject_id","novel_side","discrimination_index","preference_score","recognition_index","novel_object_time_sec","familiar_object_time_sec","total_exploration_sec","is_valid_trial","novel_entries","familiar_entries","total_distance_cm","avg_velocity_cm_s","time_in_center_sec","total_duration_sec"
+"Arena_1",1,1,"left",-0.421,28.95,0.289,1.76,4.32,6.08,FALSE,3,5,1741.22,5.8,NA,307.63

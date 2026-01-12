@@ -63,16 +63,25 @@ if (!is.null(params$occupancy)) {
   occupancy_display <- params$occupancy
 
   # Format numeric columns
-  if ("time_in_zone" %in% names(occupancy_display)) {
-    occupancy_display$time_in_zone <- round(occupancy_display$time_in_zone, 2)
+  if ("time_seconds" %in% names(occupancy_display)) {
+    occupancy_display$time_seconds <- round(occupancy_display$time_seconds, 2)
   }
   if ("percentage" %in% names(occupancy_display)) {
     occupancy_display$percentage <- round(occupancy_display$percentage, 2)
   }
 
-  kable(occupancy_display,
-        caption = "Time spent in each zone",
-        col.names = c("Zone", "Time (s)", "Percentage (%)", "Entry Count"))
+  # Select only relevant columns for display
+  display_cols <- c("zone_id", "n_frames", "time_seconds", "percentage")
+  if (all(display_cols %in% names(occupancy_display))) {
+    occupancy_display <- occupancy_display[, display_cols]
+    kable(occupancy_display,
+          caption = "Time spent in each zone",
+          col.names = c("Zone", "Frames", "Time (s)", "Percentage (%)"))
+  } else {
+    # Fallback: display all columns without custom names
+    kable(occupancy_display,
+          caption = "Time spent in each zone")
+  }
 } else {
   cat("Zone occupancy data not available.\n")
 }
@@ -110,10 +119,18 @@ if (!is.null(params$entries)) {
     }
   }
 
-  kable(entries_display,
-        caption = "Zone entry statistics",
-        col.names = c("Zone", "Number of Entries", "Mean Duration (s)",
-                     "Total Time (s)", "Latency to First Entry (s)"))
+  # Select only relevant columns for display
+  display_cols <- c("zone_id", "n_entries", "mean_duration", "total_time")
+  if (all(display_cols %in% names(entries_display))) {
+    entries_display <- entries_display[, display_cols]
+    kable(entries_display,
+          caption = "Zone entry statistics",
+          col.names = c("Zone", "Number of Entries", "Mean Duration (s)", "Total Time (s)"))
+  } else {
+    # Fallback: display all columns without custom names
+    kable(entries_display,
+          caption = "Zone entry statistics")
+  }
 } else {
   cat("Zone entry data not available.\n")
 }
@@ -147,13 +164,22 @@ if (!is.null(params$latency)) {
   latency_display <- params$latency
 
   # Format numeric columns
-  if ("latency" %in% names(latency_display)) {
-    latency_display$latency <- round(latency_display$latency, 2)
+  if ("latency_seconds" %in% names(latency_display)) {
+    latency_display$latency_seconds <- round(latency_display$latency_seconds, 2)
   }
 
-  kable(latency_display,
-        caption = "Latency to first entry into each zone",
-        col.names = c("Zone", "Latency (s)", "First Entry Frame"))
+  # Select only relevant columns for display
+  display_cols <- c("zone_id", "latency_seconds", "first_entry_frame")
+  if (all(display_cols %in% names(latency_display))) {
+    latency_display <- latency_display[, display_cols]
+    kable(latency_display,
+          caption = "Latency to first entry into each zone",
+          col.names = c("Zone", "Latency (s)", "First Entry Frame"))
+  } else {
+    # Fallback: display all columns without custom names
+    kable(latency_display,
+          caption = "Latency to first entry into each zone")
+  }
 } else {
   cat("Zone latency data not available.\n")
 }

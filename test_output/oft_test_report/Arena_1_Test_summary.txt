@@ -1,0 +1,35 @@
+========================================================
+Open Field Test Analysis -  Arena_1_Test
+========================================================
+
+TRIAL INFORMATION:
+  Total Duration: 355.68 seconds (5.93 minutes)
+  Frame Rate: 25 fps
+
+TIME IN ZONES:
+  Time in Center: 7.12 seconds (2.0%)
+  Time in Periphery: 348.60 seconds (98.0%)
+
+CENTER ZONE ACTIVITY:
+  Entries to Center: 7
+  Latency to First Center Entry: 0.00 seconds
+
+LOCOMOTION:
+  Total Distance Traveled: 2434.62 cm
+  Average Velocity: 410.88 cm/s
+  Distance in Center: 104.93 cm (4.3%)
+  Distance in Periphery: 2329.70 cm (95.7%)
+
+THIGMOTAXIS (WALL-HUGGING):
+  Time Near Walls: 0.00 seconds
+  Thigmotaxis Index: 0.000
+
+INTERPRETATION:
+  - High anxiety-like behavior: Subject spent <5% of time in center zone
+    (center avoidance is a classic anxiety phenotype)
+  - Rapid center exploration: Latency <10 seconds
+  - Low locomotor activity: 411 cm/min
+
+========================================================
+Generated: 2026-01-09 10:07:39.591052
+========================================================

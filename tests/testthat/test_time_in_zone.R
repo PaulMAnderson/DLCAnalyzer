@@ -288,6 +288,41 @@ test_that("calculate_zone_latency handles starting in zone", {
   expect_equal(zone_a_row$first_entry_frame, 0)
 })
 
+test_that("calculate_zone_latency respects min_duration filter", {
+  arena <- create_two_zone_arena()
+
+  # Frame 0-4: outside
+  # Frame 5: zone_a (single frame - tracking glitch)
+  # Frame 6-9: outside
+  # Frame 10-44: zone_a (sustained entry, 35 frames = 1.167s)
+  # Frame 45-64: zone_b (20 frames = 0.667s, sustained)
+  zone_seq <- c(
+    rep(NA, 5),           # 0-4: outside
+    "zone_a",             # 5: glitch
+    rep(NA, 4),           # 6-9: outside
+    rep("zone_a", 35),    # 10-44: real entry
+    rep("zone_b", 20)     # 45-64: zone_b sustained
+  )
+  tracking_data <- create_zone_visit_tracking(zone_seq, fps = 30)
+
+  # Without filter: should find glitch at frame 5
+  result_no_filter <- calculate_zone_latency(tracking_data, arena, min_duration = 0)
+  zone_a_no_filter <- result_no_filter[result_no_filter$zone_id == "zone_a", ]
+  expect_equal(zone_a_no_filter$first_entry_frame, 5)
+  expect_equal(zone_a_no_filter$latency_seconds, 5/30, tolerance = 0.01)
+
+  # With min_duration = 0.5s: should skip glitch and find real entry at frame 10
+  result_filtered <- calculate_zone_latency(tracking_data, arena, min_duration = 0.5)
+  zone_a_filtered <- result_filtered[result_filtered$zone_id == "zone_a", ]
+  expect_equal(zone_a_filtered$first_entry_frame, 10)
+  expect_equal(zone_a_filtered$latency_seconds, 10/30, tolerance = 0.01)
+
+  # Zone B should be the same (no glitches)
+  zone_b_no_filter <- result_no_filter[result_no_filter$zone_id == "zone_b", ]
+  zone_b_filtered <- result_filtered[result_filtered$zone_id == "zone_b", ]
+  expect_equal(zone_b_no_filter$first_entry_frame, zone_b_filtered$first_entry_frame)
+})
+
 test_that("calculate_zone_latency validates inputs", {
   arena <- create_two_zone_arena()
   tracking_data <- create_mock_tracking_data()
@@ -300,6 +335,11 @@ test_that("calculate_zone_latency validates inputs", {
   expect_error(
     calculate_zone_latency(tracking_data, list()),
     "arena_config must be an arena_config object"
+  )
+
+  expect_error(
+    calculate_zone_latency(tracking_data, arena, min_duration = -1),
+    "min_duration must be a non-negative number"
   )
 })
 
@@ -483,4 +523,118 @@ test_that("time_in_zone functions handle empty tracking data", {
 
   transitions <- calculate_zone_transitions(tracking_data, arena)
   expect_equal(nrow(transitions), 0)
+})
+
+# Regression tests for bug fixes
+test_that("time_in_zone functions exclude NA body parts (no duplicates)", {
+  # This tests the fix for duplicate entries caused by NA body parts
+  arena <- create_two_zone_arena()
+
+  # Create tracking with explicit NA body part entries
+  # This simulates what happens when classify_points_by_zone returns NA body parts
+  zone_seq <- c(rep("zone_a", 5), rep("zone_b", 5))
+  n_frames <- length(zone_seq)
+
+  tracking_df <- data.frame(
+    frame = rep(0:(n_frames - 1), 2),  # Duplicate frames
+    time = rep((0:(n_frames - 1)) / 30, 2),
+    body_part = c(rep("nose", n_frames), rep(NA, n_frames)),  # One valid, one NA
+    x = rep(c(rep(100, 5), rep(100, 5)), 2),
+    y = rep(c(rep(50, 5), rep(150, 5)), 2),
+    likelihood = rep(0.99, n_frames * 2),
+    stringsAsFactors = FALSE
+  )
+
+  tracking_data <- new_tracking_data(
+    metadata = list(source = "test", fps = 30, subject_id = "test"),
+    tracking = tracking_df,
+    arena = list(dimensions = list(width = 400, height = 200))
+  )
+
+  # Test entries - should have exactly 2 rows (one per zone), not 4
+  entries <- calculate_zone_entries(tracking_data, arena, body_part = "nose")
+  expect_equal(nrow(entries), 2)
+  expect_false("body_part" %in% names(entries))  # No body_part column when specific part requested
+
+  # Check no duplicates
+  zone_counts <- table(entries$zone_id)
+  expect_true(all(zone_counts == 1))
+
+  # Test exits - should have exactly 2 rows
+  exits <- calculate_zone_exits(tracking_data, arena, body_part = "nose")
+  expect_equal(nrow(exits), 2)
+  zone_counts_exits <- table(exits$zone_id)
+  expect_true(all(zone_counts_exits == 1))
+
+  # Test latency - should have exactly 2 rows (one per zone in arena)
+  latency <- calculate_zone_latency(tracking_data, arena, body_part = "nose")
+  expect_equal(nrow(latency), 2)
+  zone_counts_latency <- table(latency$zone_id)
+  expect_true(all(zone_counts_latency == 1))
+
+  # Test transitions
+  transitions <- calculate_zone_transitions(tracking_data, arena, body_part = "nose")
+  # Check no duplicate zone_id pairs
+  if (nrow(transitions) > 0) {
+    transition_pairs <- paste(transitions$from_zone, transitions$to_zone, sep = "->")
+    expect_equal(length(transition_pairs), length(unique(transition_pairs)))
+  }
+})
+
+test_that("calculate_zone_latency filters multiple brief tracking glitches", {
+  # Test that multiple single-frame glitches are all filtered out
+  arena <- create_two_zone_arena()
+
+  # Create sequence with multiple glitches:
+  # Frame 0-9: outside
+  # Frame 10: zone_a (glitch 1)
+  # Frame 11-14: outside
+  # Frame 15: zone_a (glitch 2)
+  # Frame 16-19: outside
+  # Frame 20: zone_a (glitch 3)
+  # Frame 21-29: outside
+  # Frame 30-60: zone_a (real sustained entry, 31 frames = 1.03s)
+  zone_seq <- c(
+    rep(NA, 10),
+    "zone_a",          # glitch 1
+    rep(NA, 4),
+    "zone_a",          # glitch 2
+    rep(NA, 4),
+    "zone_a",          # glitch 3
+    rep(NA, 9),
+    rep("zone_a", 31)  # real entry
+  )
+  tracking_data <- create_zone_visit_tracking(zone_seq, fps = 30)
+
+  # With min_duration = 1.0s, should skip all 3 glitches
+  result <- calculate_zone_latency(tracking_data, arena, min_duration = 1.0)
+  zone_a_row <- result[result$zone_id == "zone_a", ]
+
+  expect_equal(zone_a_row$first_entry_frame, 30)
+  expect_equal(zone_a_row$latency_seconds, 30/30, tolerance = 0.01)
+})
+
+test_that("calculate_zone_latency returns NA when only brief glitches exist", {
+  # Test when a zone is only visited briefly (all visits filtered out)
+  arena <- create_two_zone_arena()
+
+  # Only brief visits to zone_a (all < 0.5s)
+  zone_seq <- c(
+    rep(NA, 10),
+    "zone_a",          # 1 frame = 0.033s
+    rep(NA, 5),
+    rep("zone_a", 10), # 10 frames = 0.333s
+    rep(NA, 5),
+    rep("zone_a", 5),  # 5 frames = 0.167s
+    rep(NA, 10)
+  )
+  tracking_data <- create_zone_visit_tracking(zone_seq, fps = 30)
+
+  # With min_duration = 0.5s, all visits should be filtered
+  result <- calculate_zone_latency(tracking_data, arena, min_duration = 0.5)
+  zone_a_row <- result[result$zone_id == "zone_a", ]
+
+  # Should return NA since no visits meet duration threshold
+  expect_true(is.na(zone_a_row$latency_seconds))
+  expect_true(is.na(zone_a_row$first_entry_frame))
 })

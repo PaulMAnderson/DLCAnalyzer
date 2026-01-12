@@ -1,0 +1,16 @@
+"zone_id","n_frames","time_seconds","percentage","metric_type","subject_id","n_entries","mean_duration","total_time","latency_seconds","first_entry_frame"
+"centre",1542,51.4,15.9133126934985,"occupancy","ID7689",NA,NA,NA,NA,NA
+"closed_bottom",2369,78.9666666666667,24.4478844169247,"occupancy","ID7689",NA,NA,NA,NA,NA
+"closed_top",4656,155.2,48.0495356037152,"occupancy","ID7689",NA,NA,NA,NA,NA
+"open_left",1337,44.5666666666667,13.7977296181631,"occupancy","ID7689",NA,NA,NA,NA,NA
+"open_right",1088,36.2666666666667,11.2280701754386,"occupancy","ID7689",NA,NA,NA,NA,NA
+"centre",NA,NA,NA,"entries","ID7689",64,0.633333333333333,40.5333333333333,NA,NA
+"closed_bottom",NA,NA,NA,"entries","ID7689",8,8.5125,68.1,NA,NA
+"closed_top",NA,NA,NA,"entries","ID7689",49,2.94557823129252,144.333333333333,NA,NA
+"open_left",NA,NA,NA,"entries","ID7689",25,1.348,33.7,NA,NA
+"open_right",NA,NA,NA,"entries","ID7689",27,0.940740740740741,25.4,NA,NA
+"centre",NA,NA,NA,"latency","ID7689",NA,NA,NA,7.16666666666667,215
+"closed_bottom",NA,NA,NA,"latency","ID7689",NA,NA,NA,7.43333333333333,223
+"closed_top",NA,NA,NA,"latency","ID7689",NA,NA,NA,55.1333333333333,1654
+"open_left",NA,NA,NA,"latency","ID7689",NA,NA,NA,7.8,234
+"open_right",NA,NA,NA,"latency","ID7689",NA,NA,NA,7.33333333333333,220

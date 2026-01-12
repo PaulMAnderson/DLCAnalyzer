@@ -1,0 +1,16 @@
+"zone_id","n_frames","time_seconds","percentage","metric_type","subject_id","n_entries","mean_duration","total_time","latency_seconds","first_entry_frame"
+"centre",927,30.9,10.0140434265961,"occupancy","ID7699_20251021",NA,NA,NA,NA,NA
+"closed_bottom",6058,201.933333333333,65.4423679377768,"occupancy","ID7699_20251021",NA,NA,NA,NA,NA
+"closed_top",2271,75.7,24.5327859997839,"occupancy","ID7699_20251021",NA,NA,NA,NA,NA
+"open_left",446,14.8666666666667,4.817975586043,"occupancy","ID7699_20251021",NA,NA,NA,NA,NA
+"open_right",339,11.3,3.6620935508264,"occupancy","ID7699_20251021",NA,NA,NA,NA,NA
+"centre",NA,NA,NA,"entries","ID7699_20251021",19,1.35087719298246,25.6666666666667,NA,NA
+"closed_bottom",NA,NA,NA,"entries","ID7699_20251021",6,32.7833333333333,196.7,NA,NA
+"closed_top",NA,NA,NA,"entries","ID7699_20251021",5,14.0933333333333,70.4666666666667,NA,NA
+"open_left",NA,NA,NA,"entries","ID7699_20251021",6,1.60555555555556,9.63333333333333,NA,NA
+"open_right",NA,NA,NA,"entries","ID7699_20251021",2,3.03333333333333,6.06666666666667,NA,NA
+"centre",NA,NA,NA,"latency","ID7699_20251021",NA,NA,NA,5.23333333333333,157
+"closed_bottom",NA,NA,NA,"latency","ID7699_20251021",NA,NA,NA,9.96666666666667,299
+"closed_top",NA,NA,NA,"latency","ID7699_20251021",NA,NA,NA,62.4,1872
+"open_left",NA,NA,NA,"latency","ID7699_20251021",NA,NA,NA,7.03333333333333,211
+"open_right",NA,NA,NA,"latency","ID7699_20251021",NA,NA,NA,71.4666666666667,2144

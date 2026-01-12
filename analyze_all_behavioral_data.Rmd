@@ -1,0 +1,879 @@
+---
+title: "Comprehensive Behavioral Analysis - All Paradigms"
+author: "DLCAnalyzer Pipeline"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    code_folding: hide
+    theme: flatly
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 10,
+  fig.height = 8,
+  dpi = 300
+)
+
+# Set output directory
+output_dir <- "output/comprehensive_analysis"
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+```
+
+# Overview
+
+This document provides a comprehensive analysis of all behavioral paradigm data in the DLCAnalyzer repository:
+
+- **LD (Light/Dark Box)**: Anxiety assessment
+- **OFT (Open Field Test)**: Exploration and anxiety
+- **NORT (Novel Object Recognition Test)**: Memory and recognition
+- **EPM (Elevated Plus Maze)**: Anxiety and risk assessment
+
+---
+
+# Setup and Dependencies
+
+```{r load-libraries}
+# Load required packages
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(knitr)
+library(readxl)
+
+# Source all DLCAnalyzer functions
+source("R/core/data_loading.R")
+source("R/core/preprocessing.R")
+source("R/core/coordinate_transforms.R")
+source("R/core/data_structures.R")
+source("R/core/arena_config.R")
+source("R/core/quality_checks.R")
+
+# Paradigm-specific functions
+source("R/ld/ld_load.R")
+source("R/ld/ld_analysis.R")
+source("R/ld/ld_report.R")
+
+source("R/oft/oft_load.R")
+source("R/oft/oft_analysis.R")
+source("R/oft/oft_report.R")
+
+source("R/nort/nort_load.R")
+source("R/nort/nort_analysis.R")
+source("R/nort/nort_report.R")
+
+source("R/epm/epm_load.R")
+source("R/epm/epm_analysis.R")
+source("R/epm/epm_report.R")
+
+# Common utilities
+source("R/common/io.R")
+source("R/common/plotting.R")
+source("R/common/zones.R")
+source("R/common/geometry.R")
+
+cat("✓ All functions loaded successfully\n")
+```
+
+---
+
+# 1. Light/Dark Box (LD) Analysis
+
+```{r ld-setup}
+ld_data_dir <- "data/LD"
+ld_sessions <- list.dirs(ld_data_dir, recursive = FALSE, full.names = TRUE)
+cat("Found", length(ld_sessions), "LD session folders\n")
+```
+
+## 1.1 Load LD Data
+
+```{r ld-load}
+ld_all_data <- list()
+ld_errors <- list()
+
+for (session_dir in ld_sessions) {
+  session_name <- basename(session_dir)
+  cat("\nProcessing LD session:", session_name, "\n")
+
+  # Find Excel files in this session
+  excel_files <- list.files(session_dir, pattern = "\\.xlsx$",
+                            full.names = TRUE, recursive = FALSE)
+
+  for (file in excel_files) {
+    trial_name <- tools::file_path_sans_ext(basename(file))
+    cat("  Loading:", trial_name, "\n")
+
+    tryCatch({
+      # Load LD data
+      data <- load_ld_data(file, fps = 25)
+
+      # Store by session and trial
+      if (!session_name %in% names(ld_all_data)) {
+        ld_all_data[[session_name]] <- list()
+      }
+      ld_all_data[[session_name]][[trial_name]] <- data
+
+    }, error = function(e) {
+      cat("    ERROR:", e$message, "\n")
+      ld_errors[[paste(session_name, trial_name, sep = "_")]] <- e$message
+    })
+  }
+}
+
+cat("\n✓ Loaded", sum(sapply(ld_all_data, length)), "LD trials\n")
+if (length(ld_errors) > 0) {
+  cat("✗ Errors in", length(ld_errors), "trials\n")
+}
+```
+
+## 1.2 Analyze LD Data
+
+```{r ld-analyze}
+ld_results <- list()
+
+for (session_name in names(ld_all_data)) {
+  session_data <- ld_all_data[[session_name]]
+
+  for (trial_name in names(session_data)) {
+    trial_data <- session_data[[trial_name]]
+
+    # Analyze each arena
+    for (arena_name in names(trial_data)) {
+      arena_data <- trial_data[[arena_name]]
+
+      tryCatch({
+        results <- analyze_ld(arena_data$data, fps = 25)
+
+        # Store results with full identifier
+        result_id <- paste(session_name, trial_name, arena_name, sep = "_")
+        ld_results[[result_id]] <- c(
+          session = session_name,
+          trial = trial_name,
+          arena = arena_name,
+          results
+        )
+
+      }, error = function(e) {
+        cat("Error analyzing", arena_name, ":", e$message, "\n")
+      })
+    }
+  }
+}
+
+# Convert to data frame
+ld_results_df <- do.call(rbind, lapply(ld_results, as.data.frame))
+ld_results_df <- ld_results_df %>%
+  mutate(across(where(is.list), as.character))
+
+cat("✓ Analyzed", nrow(ld_results_df), "LD arenas\n")
+```
+
+## 1.3 LD Summary Statistics
+
+```{r ld-summary}
+if (nrow(ld_results_df) > 0) {
+  ld_summary <- ld_results_df %>%
+    summarise(
+      n_subjects = n(),
+      mean_time_light = mean(as.numeric(time_in_light_sec), na.rm = TRUE),
+      mean_time_dark = mean(as.numeric(time_in_dark_sec), na.rm = TRUE),
+      mean_entries_light = mean(as.numeric(entries_to_light), na.rm = TRUE),
+      mean_latency_light = mean(as.numeric(latency_to_light_sec), na.rm = TRUE),
+      mean_distance = mean(as.numeric(total_distance_cm), na.rm = TRUE)
+    )
+
+  kable(ld_summary, caption = "LD Summary Statistics", digits = 2)
+}
+```
+
+## 1.4 LD Visualizations
+
+```{r ld-plots, fig.height=6}
+if (nrow(ld_results_df) > 0) {
+  # Time in light vs dark
+  p1 <- ggplot(ld_results_df, aes(x = arena)) +
+    geom_col(aes(y = as.numeric(time_in_light_sec), fill = "Light"),
+             position = "dodge", alpha = 0.7) +
+    geom_col(aes(y = as.numeric(time_in_dark_sec), fill = "Dark"),
+             position = "dodge", alpha = 0.7) +
+    scale_fill_manual(values = c("Light" = "#FFD700", "Dark" = "#2C3E50")) +
+    labs(title = "LD: Time in Light vs Dark Zones",
+         x = "Arena", y = "Time (seconds)", fill = "Zone") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+  print(p1)
+
+  # Anxiety ratio (time in light / total time)
+  ld_results_df$anxiety_ratio <- as.numeric(ld_results_df$time_in_light_sec) /
+    (as.numeric(ld_results_df$time_in_light_sec) + as.numeric(ld_results_df$time_in_dark_sec))
+
+  p2 <- ggplot(ld_results_df, aes(x = session, y = anxiety_ratio, fill = session)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.2, alpha = 0.5) +
+    labs(title = "LD: Anxiety Ratio by Session",
+         subtitle = "Higher ratio = more time in light = lower anxiety",
+         x = "Session", y = "Light Time Ratio") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+
+  print(p2)
+}
+```
+
+## 1.5 Export LD Results
+
+```{r ld-export}
+if (nrow(ld_results_df) > 0) {
+  ld_output_file <- file.path(output_dir, "LD_all_results.csv")
+  write.csv(ld_results_df, ld_output_file, row.names = FALSE)
+  cat("✓ Exported LD results to:", ld_output_file, "\n")
+}
+```
+
+---
+
+# 2. Open Field Test (OFT) Analysis
+
+```{r oft-setup}
+oft_data_dir <- "data/OFT"
+oft_sessions <- list.dirs(oft_data_dir, recursive = FALSE, full.names = TRUE)
+cat("Found", length(oft_sessions), "OFT session folders\n")
+```
+
+## 2.1 Load OFT Data
+
+```{r oft-load}
+oft_all_data <- list()
+oft_errors <- list()
+
+for (session_dir in oft_sessions) {
+  session_name <- basename(session_dir)
+  cat("\nProcessing OFT session:", session_name, "\n")
+
+  excel_files <- list.files(session_dir, pattern = "\\.xlsx$",
+                            full.names = TRUE, recursive = FALSE)
+
+  for (file in excel_files) {
+    trial_name <- tools::file_path_sans_ext(basename(file))
+    cat("  Loading:", trial_name, "\n")
+
+    tryCatch({
+      data <- load_oft_data(file, fps = 25)
+
+      if (!session_name %in% names(oft_all_data)) {
+        oft_all_data[[session_name]] <- list()
+      }
+      oft_all_data[[session_name]][[trial_name]] <- data
+
+    }, error = function(e) {
+      cat("    ERROR:", e$message, "\n")
+      oft_errors[[paste(session_name, trial_name, sep = "_")]] <- e$message
+    })
+  }
+}
+
+cat("\n✓ Loaded", sum(sapply(oft_all_data, length)), "OFT trials\n")
+if (length(oft_errors) > 0) {
+  cat("✗ Errors in", length(oft_errors), "trials\n")
+}
+```
+
+## 2.2 Analyze OFT Data
+
+```{r oft-analyze}
+oft_results <- list()
+
+for (session_name in names(oft_all_data)) {
+  session_data <- oft_all_data[[session_name]]
+
+  for (trial_name in names(session_data)) {
+    trial_data <- session_data[[trial_name]]
+
+    for (arena_name in names(trial_data)) {
+      arena_data <- trial_data[[arena_name]]
+
+      tryCatch({
+        results <- analyze_oft(arena_data$data, fps = 25)
+
+        result_id <- paste(session_name, trial_name, arena_name, sep = "_")
+        oft_results[[result_id]] <- c(
+          session = session_name,
+          trial = trial_name,
+          arena = arena_name,
+          results
+        )
+
+      }, error = function(e) {
+        cat("Error analyzing", arena_name, ":", e$message, "\n")
+      })
+    }
+  }
+}
+
+oft_results_df <- do.call(rbind, lapply(oft_results, as.data.frame))
+oft_results_df <- oft_results_df %>%
+  mutate(across(where(is.list), as.character))
+
+cat("✓ Analyzed", nrow(oft_results_df), "OFT arenas\n")
+```
+
+## 2.3 OFT Summary Statistics
+
+```{r oft-summary}
+if (nrow(oft_results_df) > 0) {
+  oft_summary <- oft_results_df %>%
+    summarise(
+      n_subjects = n(),
+      mean_time_center = mean(as.numeric(time_in_center_sec), na.rm = TRUE),
+      mean_pct_center = mean(as.numeric(pct_time_in_center), na.rm = TRUE),
+      mean_entries_center = mean(as.numeric(entries_to_center), na.rm = TRUE),
+      mean_thigmotaxis = mean(as.numeric(thigmotaxis_index), na.rm = TRUE),
+      mean_distance = mean(as.numeric(total_distance_cm), na.rm = TRUE)
+    )
+
+  kable(oft_summary, caption = "OFT Summary Statistics", digits = 2)
+}
+```
+
+## 2.4 OFT Visualizations
+
+```{r oft-plots, fig.height=6}
+if (nrow(oft_results_df) > 0) {
+  # Center time comparison
+  p1 <- ggplot(oft_results_df, aes(x = arena, y = as.numeric(pct_time_in_center), fill = session)) +
+    geom_col(position = "dodge") +
+    labs(title = "OFT: Percentage Time in Center",
+         subtitle = "Lower time = higher anxiety",
+         x = "Arena", y = "Time in Center (%)") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+  print(p1)
+
+  # Thigmotaxis index
+  p2 <- ggplot(oft_results_df, aes(x = session, y = as.numeric(thigmotaxis_index), fill = session)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.2, alpha = 0.5) +
+    labs(title = "OFT: Thigmotaxis Index by Session",
+         subtitle = "Higher index = more wall-hugging = higher anxiety",
+         x = "Session", y = "Thigmotaxis Index") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+
+  print(p2)
+}
+```
+
+## 2.5 Export OFT Results
+
+```{r oft-export}
+if (nrow(oft_results_df) > 0) {
+  oft_output_file <- file.path(output_dir, "OFT_all_results.csv")
+  write.csv(oft_results_df, oft_output_file, row.names = FALSE)
+  cat("✓ Exported OFT results to:", oft_output_file, "\n")
+}
+```
+
+---
+
+# 3. Novel Object Recognition Test (NORT) Analysis
+
+```{r nort-setup}
+nort_data_dir <- "data/NORT"
+nort_sessions <- list.dirs(nort_data_dir, recursive = FALSE, full.names = TRUE)
+cat("Found", length(nort_sessions), "NORT session folders\n")
+```
+
+## 3.1 Load NORT Data
+
+```{r nort-load}
+nort_all_data <- list()
+nort_errors <- list()
+
+for (session_dir in nort_sessions) {
+  session_name <- basename(session_dir)
+  cat("\nProcessing NORT session:", session_name, "\n")
+
+  excel_files <- list.files(session_dir, pattern = "\\.xlsx$",
+                            full.names = TRUE, recursive = FALSE)
+
+  for (file in excel_files) {
+    trial_name <- tools::file_path_sans_ext(basename(file))
+    cat("  Loading:", trial_name, "\n")
+
+    tryCatch({
+      # Note: NORT requires novel_side specification
+      # Using "left" as default - adjust per experiment
+      data <- load_nort_data(file, fps = 25, novel_side = "left")
+
+      if (!session_name %in% names(nort_all_data)) {
+        nort_all_data[[session_name]] <- list()
+      }
+      nort_all_data[[session_name]][[trial_name]] <- data
+
+    }, error = function(e) {
+      cat("    ERROR:", e$message, "\n")
+      nort_errors[[paste(session_name, trial_name, sep = "_")]] <- e$message
+    })
+  }
+}
+
+cat("\n✓ Loaded", sum(sapply(nort_all_data, length)), "NORT trials\n")
+if (length(nort_errors) > 0) {
+  cat("✗ Errors in", length(nort_errors), "trials\n")
+}
+```
+
+## 3.2 Analyze NORT Data
+
+```{r nort-analyze}
+nort_results <- list()
+
+for (session_name in names(nort_all_data)) {
+  session_data <- nort_all_data[[session_name]]
+
+  for (trial_name in names(session_data)) {
+    trial_data <- session_data[[trial_name]]
+
+    for (arena_name in names(trial_data)) {
+      arena_data <- trial_data[[arena_name]]
+
+      tryCatch({
+        results <- analyze_nort(arena_data$data, fps = 25)
+
+        result_id <- paste(session_name, trial_name, arena_name, sep = "_")
+        nort_results[[result_id]] <- c(
+          session = session_name,
+          trial = trial_name,
+          arena = arena_name,
+          results
+        )
+
+      }, error = function(e) {
+        cat("Error analyzing", arena_name, ":", e$message, "\n")
+      })
+    }
+  }
+}
+
+nort_results_df <- do.call(rbind, lapply(nort_results, as.data.frame))
+nort_results_df <- nort_results_df %>%
+  mutate(across(where(is.list), as.character))
+
+cat("✓ Analyzed", nrow(nort_results_df), "NORT arenas\n")
+```
+
+## 3.3 NORT Summary Statistics
+
+```{r nort-summary}
+if (nrow(nort_results_df) > 0) {
+  nort_summary <- nort_results_df %>%
+    summarise(
+      n_subjects = n(),
+      mean_DI = mean(as.numeric(discrimination_index), na.rm = TRUE),
+      mean_pref_score = mean(as.numeric(preference_score), na.rm = TRUE),
+      mean_novel_time = mean(as.numeric(exploration_novel_sec), na.rm = TRUE),
+      mean_familiar_time = mean(as.numeric(exploration_familiar_sec), na.rm = TRUE),
+      pct_valid_trials = sum(as.logical(trial_valid), na.rm = TRUE) / n() * 100
+    )
+
+  kable(nort_summary, caption = "NORT Summary Statistics", digits = 3)
+}
+```
+
+## 3.4 NORT Visualizations
+
+```{r nort-plots, fig.height=6}
+if (nrow(nort_results_df) > 0) {
+  # Discrimination Index
+  p1 <- ggplot(nort_results_df, aes(x = session, y = as.numeric(discrimination_index), fill = session)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.2, alpha = 0.5) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+    labs(title = "NORT: Discrimination Index by Session",
+         subtitle = "DI > 0: novel preference | DI < 0: familiar preference",
+         x = "Session", y = "Discrimination Index") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+
+  print(p1)
+
+  # Novel vs Familiar exploration time
+  nort_long <- nort_results_df %>%
+    select(arena, session, exploration_novel_sec, exploration_familiar_sec) %>%
+    pivot_longer(cols = c(exploration_novel_sec, exploration_familiar_sec),
+                 names_to = "object_type", values_to = "time") %>%
+    mutate(time = as.numeric(time),
+           object_type = ifelse(grepl("novel", object_type), "Novel", "Familiar"))
+
+  p2 <- ggplot(nort_long, aes(x = object_type, y = time, fill = object_type)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.2, alpha = 0.3) +
+    scale_fill_manual(values = c("Novel" = "#E74C3C", "Familiar" = "#3498DB")) +
+    labs(title = "NORT: Object Exploration Time",
+         x = "Object Type", y = "Exploration Time (seconds)") +
+    theme_minimal() +
+    theme(legend.position = "none")
+
+  print(p2)
+}
+```
+
+## 3.5 Export NORT Results
+
+```{r nort-export}
+if (nrow(nort_results_df) > 0) {
+  nort_output_file <- file.path(output_dir, "NORT_all_results.csv")
+  write.csv(nort_results_df, nort_output_file, row.names = FALSE)
+  cat("✓ Exported NORT results to:", nort_output_file, "\n")
+}
+```
+
+---
+
+# 4. Elevated Plus Maze (EPM) Analysis
+
+```{r epm-setup}
+epm_data_dir <- "data/EPM/Example DLC Data"
+epm_sessions <- list.dirs(epm_data_dir, recursive = FALSE, full.names = TRUE)
+cat("Found", length(epm_sessions), "EPM session folders\n")
+```
+
+## 4.1 Load EPM Data
+
+```{r epm-load}
+epm_all_data <- list()
+epm_errors <- list()
+
+for (session_dir in epm_sessions) {
+  session_name <- basename(session_dir)
+  cat("\nProcessing EPM session:", session_name, "\n")
+
+  csv_files <- list.files(session_dir, pattern = "\\.csv$",
+                          full.names = TRUE, recursive = FALSE)
+  # Exclude filtered files
+  csv_files <- csv_files[!grepl("_filtered\\.csv$", csv_files)]
+
+  for (file in csv_files) {
+    subject_id <- gsub("_superanimal.*", "", basename(file))
+    cat("  Loading:", subject_id, "\n")
+
+    tryCatch({
+      # Load EPM data with default parameters
+      # NOTE: Adjust pixels_per_cm if calibration is known
+      data <- load_epm_data(file, fps = 25, pixels_per_cm = 5.3,
+                           body_part = "mouse_center")
+
+      if (!session_name %in% names(epm_all_data)) {
+        epm_all_data[[session_name]] <- list()
+      }
+      epm_all_data[[session_name]][[subject_id]] <- data
+
+    }, error = function(e) {
+      cat("    ERROR:", e$message, "\n")
+      epm_errors[[paste(session_name, subject_id, sep = "_")]] <- e$message
+    })
+  }
+}
+
+cat("\n✓ Loaded", sum(sapply(epm_all_data, length)), "EPM subjects\n")
+if (length(epm_errors) > 0) {
+  cat("✗ Errors in", length(epm_errors), "subjects\n")
+}
+```
+
+## 4.2 Analyze EPM Data
+
+```{r epm-analyze}
+epm_results <- list()
+
+for (session_name in names(epm_all_data)) {
+  session_data <- epm_all_data[[session_name]]
+
+  for (subject_id in names(session_data)) {
+    subject_data <- session_data[[subject_id]]
+
+    tryCatch({
+      results <- analyze_epm(subject_data, fps = 25)
+
+      result_id <- paste(session_name, subject_id, sep = "_")
+      epm_results[[result_id]] <- c(
+        session = session_name,
+        subject = subject_id,
+        results
+      )
+
+    }, error = function(e) {
+      cat("Error analyzing", subject_id, ":", e$message, "\n")
+    })
+  }
+}
+
+epm_results_df <- do.call(rbind, lapply(epm_results, as.data.frame))
+epm_results_df <- epm_results_df %>%
+  mutate(across(where(is.list), as.character))
+
+cat("✓ Analyzed", nrow(epm_results_df), "EPM subjects\n")
+```
+
+## 4.3 EPM Summary Statistics
+
+```{r epm-summary}
+if (nrow(epm_results_df) > 0) {
+  epm_summary <- epm_results_df %>%
+    summarise(
+      n_subjects = n(),
+      mean_open_arm_ratio = mean(as.numeric(open_arm_ratio), na.rm = TRUE),
+      mean_entries_ratio = mean(as.numeric(entries_ratio), na.rm = TRUE),
+      mean_time_open = mean(as.numeric(time_in_open_arms_sec), na.rm = TRUE),
+      mean_time_closed = mean(as.numeric(time_in_closed_arms_sec), na.rm = TRUE),
+      mean_total_entries = mean(as.numeric(total_arm_entries), na.rm = TRUE),
+      mean_distance = mean(as.numeric(total_distance_cm), na.rm = TRUE)
+    )
+
+  kable(epm_summary, caption = "EPM Summary Statistics", digits = 3)
+}
+```
+
+## 4.4 EPM Visualizations
+
+```{r epm-plots, fig.height=6}
+if (nrow(epm_results_df) > 0) {
+  # Open Arm Ratio (primary anxiety index)
+  p1 <- ggplot(epm_results_df, aes(x = session, y = as.numeric(open_arm_ratio), fill = session)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.2, alpha = 0.5) +
+    geom_hline(yintercept = c(0.15, 0.25, 0.40, 0.55),
+               linetype = "dashed", alpha = 0.3) +
+    labs(title = "EPM: Open Arm Ratio by Session",
+         subtitle = "Lower ratio = higher anxiety | Guidelines: <0.15 (high), 0.25-0.40 (moderate), >0.55 (low)",
+         x = "Session", y = "Open Arm Ratio") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+
+  print(p1)
+
+  # Time in arm types
+  epm_long <- epm_results_df %>%
+    select(subject, session, time_in_open_arms_sec, time_in_closed_arms_sec, time_in_center_sec) %>%
+    pivot_longer(cols = c(time_in_open_arms_sec, time_in_closed_arms_sec, time_in_center_sec),
+                 names_to = "zone", values_to = "time") %>%
+    mutate(time = as.numeric(time),
+           zone = case_when(
+             grepl("open", zone) ~ "Open Arms",
+             grepl("closed", zone) ~ "Closed Arms",
+             grepl("center", zone) ~ "Center"
+           ))
+
+  p2 <- ggplot(epm_long, aes(x = zone, y = time, fill = zone)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.2, alpha = 0.3) +
+    scale_fill_manual(values = c("Open Arms" = "#E74C3C",
+                                  "Closed Arms" = "#3498DB",
+                                  "Center" = "#2ECC71")) +
+    labs(title = "EPM: Time in Different Zones",
+         x = "Zone", y = "Time (seconds)") +
+    theme_minimal() +
+    theme(legend.position = "none")
+
+  print(p2)
+}
+```
+
+## 4.5 Export EPM Results
+
+```{r epm-export}
+if (nrow(epm_results_df) > 0) {
+  epm_output_file <- file.path(output_dir, "EPM_all_results.csv")
+  write.csv(epm_results_df, epm_output_file, row.names = FALSE)
+  cat("✓ Exported EPM results to:", epm_output_file, "\n")
+}
+```
+
+---
+
+# 5. Cross-Paradigm Comparisons
+
+## 5.1 Sample Sizes
+
+```{r cross-sample-sizes}
+sample_sizes <- data.frame(
+  Paradigm = c("LD", "OFT", "NORT", "EPM"),
+  N_Subjects = c(
+    ifelse(exists("ld_results_df"), nrow(ld_results_df), 0),
+    ifelse(exists("oft_results_df"), nrow(oft_results_df), 0),
+    ifelse(exists("nort_results_df"), nrow(nort_results_df), 0),
+    ifelse(exists("epm_results_df"), nrow(epm_results_df), 0)
+  )
+)
+
+ggplot(sample_sizes, aes(x = Paradigm, y = N_Subjects, fill = Paradigm)) +
+  geom_col() +
+  geom_text(aes(label = N_Subjects), vjust = -0.5) +
+  labs(title = "Sample Sizes Across Paradigms",
+       x = "Paradigm", y = "Number of Subjects/Arenas") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+## 5.2 Anxiety Indices Comparison
+
+```{r cross-anxiety}
+# Compile anxiety-related metrics
+anxiety_data <- data.frame(
+  paradigm = character(),
+  subject = character(),
+  anxiety_index = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# LD: higher time in light = lower anxiety
+if (exists("ld_results_df") && nrow(ld_results_df) > 0) {
+  ld_anxiety <- data.frame(
+    paradigm = "LD",
+    subject = ld_results_df$arena,
+    anxiety_index = as.numeric(ld_results_df$time_in_light_sec) /
+      (as.numeric(ld_results_df$time_in_light_sec) + as.numeric(ld_results_df$time_in_dark_sec))
+  )
+  anxiety_data <- rbind(anxiety_data, ld_anxiety)
+}
+
+# OFT: higher time in center = lower anxiety (normalized)
+if (exists("oft_results_df") && nrow(oft_results_df) > 0) {
+  oft_anxiety <- data.frame(
+    paradigm = "OFT",
+    subject = oft_results_df$arena,
+    anxiety_index = as.numeric(oft_results_df$pct_time_in_center) / 100
+  )
+  anxiety_data <- rbind(anxiety_data, oft_anxiety)
+}
+
+# EPM: open arm ratio (already 0-1)
+if (exists("epm_results_df") && nrow(epm_results_df) > 0) {
+  epm_anxiety <- data.frame(
+    paradigm = "EPM",
+    subject = epm_results_df$subject,
+    anxiety_index = as.numeric(epm_results_df$open_arm_ratio)
+  )
+  anxiety_data <- rbind(anxiety_data, epm_anxiety)
+}
+
+if (nrow(anxiety_data) > 0) {
+  ggplot(anxiety_data, aes(x = paradigm, y = anxiety_index, fill = paradigm)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.2, alpha = 0.3) +
+    labs(title = "Anxiety Indices Across Paradigms",
+         subtitle = "Normalized: Higher = Lower Anxiety",
+         x = "Paradigm", y = "Anxiety Index (normalized)") +
+    theme_minimal() +
+    theme(legend.position = "none")
+}
+```
+
+---
+
+# 6. Individual Animal Plots
+
+## 6.1 Generate Individual EPM Plots
+
+```{r individual-epm-plots, results='hide'}
+if (length(epm_all_data) > 0) {
+  epm_plots_dir <- file.path(output_dir, "EPM_individual_plots")
+  dir.create(epm_plots_dir, recursive = TRUE, showWarnings = FALSE)
+
+  for (session_name in names(epm_all_data)) {
+    session_data <- epm_all_data[[session_name]]
+
+    for (subject_id in names(session_data)) {
+      subject_data <- session_data[[subject_id]]
+
+      tryCatch({
+        # Generate report for this subject
+        subject_dir <- file.path(epm_plots_dir, session_name, subject_id)
+        generate_epm_report(subject_data, output_dir = subject_dir, subject_id = subject_id)
+
+      }, error = function(e) {
+        cat("Error generating plots for", subject_id, ":", e$message, "\n")
+      })
+    }
+  }
+
+  cat("✓ Generated EPM plots in:", epm_plots_dir, "\n")
+}
+```
+
+## 6.2 Generate Individual LD Plots
+
+```{r individual-ld-plots, results='hide'}
+if (length(ld_all_data) > 0) {
+  ld_plots_dir <- file.path(output_dir, "LD_individual_plots")
+  dir.create(ld_plots_dir, recursive = TRUE, showWarnings = FALSE)
+
+  for (session_name in names(ld_all_data)) {
+    session_data <- ld_all_data[[session_name]]
+
+    for (trial_name in names(session_data)) {
+      trial_data <- session_data[[trial_name]]
+
+      for (arena_name in names(trial_data)) {
+        arena_data <- trial_data[[arena_name]]
+
+        tryCatch({
+          subject_id <- paste(session_name, trial_name, arena_name, sep = "_")
+          subject_dir <- file.path(ld_plots_dir, session_name, trial_name, arena_name)
+          generate_ld_report(arena_data, output_dir = subject_dir, subject_id = subject_id)
+
+        }, error = function(e) {
+          cat("Error generating plots for", arena_name, ":", e$message, "\n")
+        })
+      }
+    }
+  }
+
+  cat("✓ Generated LD plots in:", ld_plots_dir, "\n")
+}
+```
+
+---
+
+# 7. Summary
+
+```{r final-summary}
+cat("\n========================================\n")
+cat("  Comprehensive Analysis Complete\n")
+cat("========================================\n\n")
+
+cat("Paradigms Analyzed:\n")
+if (exists("ld_results_df")) cat("  ✓ LD:", nrow(ld_results_df), "arenas\n")
+if (exists("oft_results_df")) cat("  ✓ OFT:", nrow(oft_results_df), "arenas\n")
+if (exists("nort_results_df")) cat("  ✓ NORT:", nrow(nort_results_df), "arenas\n")
+if (exists("epm_results_df")) cat("  ✓ EPM:", nrow(epm_results_df), "subjects\n")
+
+cat("\nOutput Files:\n")
+cat("  📊 Combined results CSV files in:", output_dir, "\n")
+cat("  📈 Individual plots in:", output_dir, "/{paradigm}_individual_plots/\n")
+cat("  📄 This HTML report\n")
+
+cat("\nNext Steps:\n")
+cat("  1. Review quality control metrics\n")
+cat("  2. Verify novel side specification for NORT\n")
+cat("  3. Adjust EPM pixels_per_cm calibration if needed\n")
+cat("  4. Perform statistical comparisons between groups\n")
+cat("  5. Generate publication-ready figures\n\n")
+```
+
+---
+
+# Session Info
+
+```{r session-info}
+sessionInfo()
+```

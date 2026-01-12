@@ -121,16 +121,28 @@ classify_points_by_zone <- function(tracking_data, arena_config, body_part = NUL
   unclassified_idx <- which(!all_points %in% classified_points)
 
   if (length(unclassified_idx) > 0) {
-    unclassified_data <- data.frame(
-      frame = tracking_df$frame[unclassified_idx],
-      body_part = tracking_df$body_part[unclassified_idx],
-      x = tracking_df$x[unclassified_idx],
-      y = tracking_df$y[unclassified_idx],
-      zone_id = NA_character_,
-      stringsAsFactors = FALSE
-    )
+    # Only include unclassified points that have valid coordinates
+    # Points with NA coordinates (missing tracking data) are excluded
+    # NOTE: Data should be preprocessed to remove leading/trailing NAs before analysis
+    unclassified_x <- tracking_df$x[unclassified_idx]
+    unclassified_y <- tracking_df$y[unclassified_idx]
+    valid_coords_idx <- !is.na(unclassified_x) & !is.na(unclassified_y)
 
-    result <- rbind(result, unclassified_data)
+    # Filter to only unclassified points with valid coordinates
+    final_unclassified_idx <- unclassified_idx[valid_coords_idx]
+
+    if (length(final_unclassified_idx) > 0) {
+      unclassified_data <- data.frame(
+        frame = tracking_df$frame[final_unclassified_idx],
+        body_part = tracking_df$body_part[final_unclassified_idx],
+        x = tracking_df$x[final_unclassified_idx],
+        y = tracking_df$y[final_unclassified_idx],
+        zone_id = NA_character_,
+        stringsAsFactors = FALSE
+      )
+
+      result <- rbind(result, unclassified_data)
+    }
   }
 
   # Sort by frame and body part

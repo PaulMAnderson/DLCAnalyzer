@@ -16,12 +16,7 @@ arenas:
       centre_top_left: [325, 215]
 
     zones:
-    # Base zone defined by points
-      - id: maze
-        name: "Entire Maze"
-        type: points
-        point_names: ["top_left", "top_right", "centre_top_right", "right_top", "right_bottom", "centre_bottom_right", "bottom_right", "bottom_left", "centre_bottom_left", "left_bottom", "left_top", "centre_top_left"]
-      
+    # Base zone defined by points      
       - id: closed_top
         name: "Closed Top"
         type: points

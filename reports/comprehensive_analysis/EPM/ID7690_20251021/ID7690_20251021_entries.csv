@@ -1,0 +1,6 @@
+"zone_id","n_entries","mean_duration","total_time","metric_type","subject_id"
+"centre",34,1.88529411764706,64.1,"entries","ID7690_20251021"
+"closed_bottom",17,6.7,113.9,"entries","ID7690_20251021"
+"closed_top",9,12.3,110.7,"entries","ID7690_20251021"
+"open_left",2,2.6,5.2,"entries","ID7690_20251021"
+"open_right",7,1.88095238095238,13.1666666666667,"entries","ID7690_20251021"

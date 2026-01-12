@@ -1,0 +1,6 @@
+"zone_id","n_frames","time_seconds","percentage","metric_type","subject_id"
+"centre",1496,49.8666666666667,16.255568836249,"occupancy","ID7701_20251021"
+"closed_bottom",1971,65.7,21.4169292621971,"occupancy","ID7701_20251021"
+"closed_top",5257,175.233333333333,57.1226773878083,"occupancy","ID7701_20251021"
+"open_left",652,21.7333333333333,7.08464631098555,"occupancy","ID7701_20251021"
+"open_right",471,15.7,5.1178963381506,"occupancy","ID7701_20251021"

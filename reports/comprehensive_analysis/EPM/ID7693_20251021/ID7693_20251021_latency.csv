@@ -1,0 +1,6 @@
+"zone_id","latency_seconds","first_entry_frame","metric_type","subject_id"
+"centre",5.06666666666667,152,"latency","ID7693_20251021"
+"closed_bottom",29.8666666666667,896,"latency","ID7693_20251021"
+"closed_top",5.66666666666667,170,"latency","ID7693_20251021"
+"open_left",69.3,2079,"latency","ID7693_20251021"
+"open_right",4.86666666666667,146,"latency","ID7693_20251021"

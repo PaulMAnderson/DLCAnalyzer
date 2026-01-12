@@ -79,8 +79,9 @@ calculate_zone_entries <- function(tracking_data, arena_config, body_part = NULL
   # Determine if analyzing multiple body parts
   analyze_multiple_bp <- is.null(body_part)
 
-  # Get unique body parts
+  # Get unique body parts (exclude NA)
   body_parts <- unique(classifications$body_part)
+  body_parts <- body_parts[!is.na(body_parts)]
 
   # Initialize results list
   results_list <- list()
@@ -271,8 +272,9 @@ calculate_zone_exits <- function(tracking_data, arena_config, body_part = NULL) 
   # Determine if analyzing multiple body parts
   analyze_multiple_bp <- is.null(body_part)
 
-  # Get unique body parts
+  # Get unique body parts (exclude NA)
   body_parts <- unique(classifications$body_part)
+  body_parts <- body_parts[!is.na(body_parts)]
 
   # Initialize results list
   results_list <- list()
@@ -363,6 +365,9 @@ calculate_zone_exits <- function(tracking_data, arena_config, body_part = NULL) 
 #' @param tracking_data A tracking_data object
 #' @param arena_config An arena_config object containing zone definitions
 #' @param body_part Character. Specific body part to analyze (NULL analyzes all body parts)
+#' @param min_duration Numeric. Minimum duration (in seconds) for a visit to count as
+#'   a valid entry. Brief entries shorter than this (e.g., tracking glitches) are ignored.
+#'   Default is 0 (count all entries).
 #'
 #' @return Data frame with columns:
 #'   \itemize{
@@ -376,11 +381,17 @@ calculate_zone_exits <- function(tracking_data, arena_config, body_part = NULL) 
 #' \dontrun{
 #' tracking_data <- convert_dlc_to_tracking_data("data.csv", fps = 30)
 #' arena <- load_arena_config("arena.yaml")
+#'
+#' # All entries (including brief ones)
 #' latencies <- calculate_zone_latency(tracking_data, arena)
+#'
+#' # Only entries with >= 0.5 second duration (filters tracking glitches)
+#' latencies_filtered <- calculate_zone_latency(tracking_data, arena, min_duration = 0.5)
 #' }
 #'
 #' @export
-calculate_zone_latency <- function(tracking_data, arena_config, body_part = NULL) {
+calculate_zone_latency <- function(tracking_data, arena_config, body_part = NULL,
+                                    min_duration = 0) {
   # Validate inputs
   if (!is_tracking_data(tracking_data)) {
     stop("tracking_data must be a tracking_data object", call. = FALSE)
@@ -388,6 +399,10 @@ calculate_zone_latency <- function(tracking_data, arena_config, body_part = NULL
 
   if (!is_arena_config(arena_config)) {
     stop("arena_config must be an arena_config object", call. = FALSE)
+  }
+
+  if (!is.numeric(min_duration) || min_duration < 0) {
+    stop("min_duration must be a non-negative number", call. = FALSE)
   }
 
   # Get fps from metadata
@@ -414,8 +429,9 @@ calculate_zone_latency <- function(tracking_data, arena_config, body_part = NULL
   # Get all zone IDs from arena config
   all_zones <- sapply(arena_config$zones, function(z) z$id)
 
-  # Get unique body parts
+  # Get unique body parts (exclude NA)
   body_parts <- unique(classifications$body_part)
+  body_parts <- body_parts[!is.na(body_parts)]
 
   # Initialize results list
   results_list <- list()
@@ -428,16 +444,68 @@ calculate_zone_latency <- function(tracking_data, arena_config, body_part = NULL
 
     # For each zone in arena config
     for (zone_id in all_zones) {
-      # Find first occurrence of this zone
-      zone_frames <- bp_data$frame[bp_data$zone_id == zone_id & !is.na(bp_data$zone_id)]
+      # Find first valid entry meeting minimum duration requirement
+      latency_seconds <- NA_real_
+      first_entry_frame <- NA_integer_
 
-      if (length(zone_frames) == 0) {
-        # Never entered this zone
-        latency_seconds <- NA_real_
-        first_entry_frame <- NA_integer_
+      if (min_duration > 0) {
+        # Need to find first sustained entry
+        # Create binary indicator: is point in this zone?
+        bp_data$in_zone <- bp_data$zone_id == zone_id & !is.na(bp_data$zone_id)
+
+        # Remove duplicate frames
+        unique_frames <- !duplicated(bp_data$frame)
+        bp_unique <- bp_data[unique_frames, ]
+
+        # Detect entries using run-length encoding
+        in_zone_vec <- bp_unique$in_zone
+        n_frames <- length(in_zone_vec)
+
+        if (n_frames >= 2) {
+          # Find transitions
+          transitions <- diff(in_zone_vec)
+          entry_indices <- which(transitions == 1) + 1
+          exit_indices <- which(transitions == -1) + 1
+
+          # Handle case where animal is in zone at start
+          if (in_zone_vec[1]) {
+            entry_indices <- c(1, entry_indices)
+          }
+
+          # Handle case where animal is in zone at end
+          if (in_zone_vec[n_frames]) {
+            exit_indices <- c(exit_indices, n_frames + 1)
+          }
+
+          # Find first entry with sufficient duration
+          for (i in seq_along(entry_indices)) {
+            entry_idx <- entry_indices[i]
+            exit_idx <- exit_indices[exit_indices > entry_idx][1]
+
+            if (is.na(exit_idx)) {
+              exit_idx <- n_frames + 1
+            }
+
+            # Calculate duration in seconds
+            duration_frames <- exit_idx - entry_idx
+            duration_sec <- duration_frames / fps
+
+            if (duration_sec >= min_duration) {
+              # This is the first valid entry
+              first_entry_frame <- bp_unique$frame[entry_idx]
+              latency_seconds <- first_entry_frame / fps
+              break
+            }
+          }
+        }
       } else {
-        first_entry_frame <- min(zone_frames)
-        latency_seconds <- first_entry_frame / fps
+        # No minimum duration filter - use simple first occurrence
+        zone_frames <- bp_data$frame[bp_data$zone_id == zone_id & !is.na(bp_data$zone_id)]
+
+        if (length(zone_frames) > 0) {
+          first_entry_frame <- min(zone_frames)
+          latency_seconds <- first_entry_frame / fps
+        }
       }
 
       # Store result
@@ -538,8 +606,9 @@ calculate_zone_transitions <- function(tracking_data, arena_config, body_part = 
   # Determine if analyzing multiple body parts
   analyze_multiple_bp <- is.null(body_part)
 
-  # Get unique body parts
+  # Get unique body parts (exclude NA)
   body_parts <- unique(classifications$body_part)
+  body_parts <- body_parts[!is.na(body_parts)]
 
   # Initialize results list
   results_list <- list()

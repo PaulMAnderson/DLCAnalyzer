@@ -1,0 +1,2 @@
+"time_in_center_sec","time_in_periphery_sec","pct_time_in_center","pct_time_in_periphery","entries_to_center","latency_to_center_sec","distance_in_center_cm","distance_in_periphery_cm","total_distance_cm","avg_velocity_cm_s","time_near_wall_sec","thigmotaxis_index","total_duration_sec","n_frames","fps","subject_id"
+7.12,348.6,2.00179937022042,98.0094466936572,7,0,104.925699399343,2329.69886088956,2434.62282896,410.883686307381,0,0,355.68,8893,25,"Arena_1_Test"

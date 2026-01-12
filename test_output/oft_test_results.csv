@@ -1,0 +1,5 @@
+"arena_name","arena_id","subject_id","time_in_center_sec","time_in_periphery_sec","pct_time_in_center","pct_time_in_periphery","entries_to_center","latency_to_center_sec","distance_in_center_cm","distance_in_periphery_cm","total_distance_cm","avg_velocity_cm_s","time_near_wall_sec","thigmotaxis_index","total_duration_sec","n_frames","fps"
+"Arena_1",1,1,7.12,348.6,2,98.01,7,0,104.93,2329.7,2434.62,410.88,0,0,355.68,8893,25
+"Arena_2",2,1,12.48,338.44,3.55,96.36,11,21.4,218.95,2824.73,3047.07,520.75,0.36,0,351.24,8782,25
+"Arena_3",3,1,24.12,346.04,6.52,93.49,14,2.4,340.73,3320.69,3661.42,593.94,0,0,370.12,9254,25
+"Arena_4",4,1,13.4,348.48,3.7,96.31,9,0,171.42,1805.53,1976.95,327.96,0,0,361.84,9047,25

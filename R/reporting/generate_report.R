@@ -29,6 +29,11 @@ generate_subject_report <- function(tracking_data, arena_config,
                                    output_dir = "reports",
                                    body_part = "mouse_center",
                                    format = "html") {
+  # Load required packages
+  if (requireNamespace("ggplot2", quietly = TRUE)) {
+    library(ggplot2)
+  }
+
   # Validate inputs
   if (!inherits(tracking_data, "tracking_data")) {
     stop("tracking_data must be a tracking_data object")
@@ -60,7 +65,7 @@ generate_subject_report <- function(tracking_data, arena_config,
   # 1. Run quality checks
   message("  - Running quality checks...")
   quality_results <- tryCatch({
-    assess_tracking_quality(tracking_data, body_part = body_part)
+    check_tracking_quality(tracking_data, body_part = body_part)
   }, error = function(e) {
     warning(sprintf("Quality assessment failed: %s", e$message))
     NULL
@@ -183,12 +188,28 @@ generate_subject_report <- function(tracking_data, arena_config,
 
   if (length(all_metrics) > 0) {
     tryCatch({
-      combined_metrics <- do.call(rbind, lapply(names(all_metrics), function(name) {
-        df <- all_metrics[[name]]
+      # Save each metric type separately to avoid column mismatch issues
+      for (metric_name in names(all_metrics)) {
+        df <- all_metrics[[metric_name]]
         df$subject_id <- subject_id
-        df
-      }))
-      write.csv(combined_metrics, metrics_file, row.names = FALSE)
+        metric_file <- file.path(output_dir, sprintf("%s_%s.csv", subject_id, metric_name))
+        write.csv(df, metric_file, row.names = FALSE)
+      }
+
+      # Also try to save a combined file (with warning suppression if it fails)
+      tryCatch({
+        # Use dplyr::bind_rows if available (handles column mismatches)
+        if (requireNamespace("dplyr", quietly = TRUE)) {
+          combined_metrics <- dplyr::bind_rows(lapply(names(all_metrics), function(name) {
+            df <- all_metrics[[name]]
+            df$subject_id <- subject_id
+            df
+          }))
+          write.csv(combined_metrics, metrics_file, row.names = FALSE)
+        }
+      }, error = function(e) {
+        # Silent fail - individual files are saved anyway
+      })
     }, error = function(e) {
       warning(sprintf("Failed to save metrics: %s", e$message))
     })
@@ -201,8 +222,22 @@ generate_subject_report <- function(tracking_data, arena_config,
   template_file <- system.file("templates", "subject_report.Rmd",
                                package = "DLCAnalyzer")
   if (template_file == "") {
-    # Try local path
-    template_file <- file.path("inst", "templates", "subject_report.Rmd")
+    # Try local path - need to find package root directory
+    # Look for the R directory to determine package root
+    r_file_path <- system.file(package = "base")  # Get a known path
+    pkg_paths <- c(
+      "/mnt/g/Bella/Rebecca/Code/DLCAnalyzer",  # Absolute path
+      file.path(getwd(), "Code/DLCAnalyzer"),   # Relative from current dir
+      file.path(dirname(getwd()), "Code/DLCAnalyzer")
+    )
+
+    for (path in pkg_paths) {
+      candidate <- file.path(path, "inst", "templates", "subject_report.Rmd")
+      if (file.exists(candidate)) {
+        template_file <- candidate
+        break
+      }
+    }
   }
 
   if (file.exists(template_file)) {
@@ -226,12 +261,26 @@ generate_subject_report <- function(tracking_data, arena_config,
 
       # Render report
       if (format %in% c("html", "both")) {
-        output_file <- file.path(output_dir, sprintf("%s_report.html", subject_id))
-        rmarkdown::render(template_file,
-                         output_file = output_file,
-                         params = report_data,
-                         quiet = TRUE)
-        report_files$html <- output_file
+        if (requireNamespace("rmarkdown", quietly = TRUE)) {
+          # Render directly to output directory
+          output_file <- sprintf("%s_report.html", subject_id)
+          final_output <- file.path(normalizePath(output_dir), output_file)
+
+          rmarkdown::render(template_file,
+                           output_file = output_file,
+                           output_dir = normalizePath(output_dir),
+                           params = report_data,
+                           quiet = TRUE)
+
+          # Check if file was created
+          if (file.exists(final_output)) {
+            report_files$html <- final_output
+          } else {
+            warning("HTML report file was not created")
+          }
+        } else {
+          warning("rmarkdown package not available, skipping HTML report generation")
+        }
       }
 
       if (format %in% c("pdf", "both")) {

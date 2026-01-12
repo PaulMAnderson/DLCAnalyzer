@@ -80,21 +80,35 @@ quality <- check_tracking_quality(
   body_part = body_part
 )
 
-cat(sprintf("  Overall quality score: %.2f%%\n", quality$overall_quality * 100))
-cat(sprintf("  Low confidence points: %.2f%%\n", quality$low_confidence_pct))
-cat(sprintf("  Missing data points: %.2f%%\n", quality$missing_pct))
+# Display quality metrics
+if (nrow(quality$likelihood) > 0) {
+  cat("  Likelihood statistics:\n")
+  print(quality$likelihood)
+}
+
+if (nrow(quality$missing_data) > 0) {
+  cat("\n  Missing data:\n")
+  print(quality$missing_data)
+
+  # Get missing percentage for the body part we're analyzing
+  missing_pct <- quality$missing_data$pct_missing[quality$missing_data$body_part == body_part]
+  if (length(missing_pct) == 0) missing_pct <- 0
+}
 
 # Optional: Filter low confidence points
-if (quality$low_confidence_pct > 5) {
-  cat("\n  Filtering low confidence points...\n")
-  tracking_data <- filter_low_confidence(
-    tracking_data,
-    threshold = likelihood_threshold
-  )
+if (nrow(quality$likelihood) > 0) {
+  mean_likelihood <- quality$likelihood$mean_likelihood[quality$likelihood$body_part == body_part]
+  if (length(mean_likelihood) > 0 && mean_likelihood < 0.9) {
+    cat("\n  Filtering low confidence points...\n")
+    tracking_data <- filter_low_confidence(
+      tracking_data,
+      threshold = likelihood_threshold
+    )
+  }
 }
 
 # Optional: Interpolate missing data
-if (quality$missing_pct > 0) {
+if (exists("missing_pct") && missing_pct > 0) {
   cat("  Interpolating missing data...\n")
   tracking_data <- interpolate_missing(
     tracking_data,
@@ -128,15 +142,18 @@ entries <- calculate_zone_entries(
 )
 
 cat(sprintf("    Total entries to open arms: %d\n",
-            sum(entries$entry_count[entries$zone_id %in% c("open_arm_1", "open_arm_2")])))
+            sum(entries$n_entries[entries$zone_id %in% c("open_left", "open_right")])))
 
 # Zone latency
 cat("\n  Calculating zone latencies...\n")
 latency <- calculate_zone_latency(
   tracking_data,
   arena,
-  body_part = body_part
+  body_part = body_part,
+  min_duration = 0.5  # Filter out brief tracking glitches (<0.5 sec)
 )
+
+print(latency)
 
 # Zone transitions
 cat("  Calculating zone transitions...\n")
@@ -154,8 +171,8 @@ distance <- calculate_distance_traveled(
 )
 
 cat(sprintf("    Total distance traveled: %.2f pixels (%.2f cm)\n",
-            distance$total_distance,
-            distance$total_distance * 0.1))  # Assuming 0.1 cm/pixel
+            distance,
+            distance * 0.1))  # Assuming 0.1 cm/pixel
 
 # ============================================================================
 # STEP 4: GENERATE REPORT
@@ -186,12 +203,12 @@ cat("Duration:", sprintf("%.2f seconds", nrow(tracking_data$tracking) / fps), "\
 
 cat("Key Findings:\n")
 cat(sprintf("  - Time in open arms: %.2f%% (%.2f sec)\n",
-            sum(occupancy$percentage[occupancy$zone_id %in% c("open_arm_1", "open_arm_2")]),
-            sum(occupancy$time_in_zone[occupancy$zone_id %in% c("open_arm_1", "open_arm_2")])))
+            sum(occupancy$percentage[occupancy$zone_id %in% c("open_left", "open_right")]),
+            sum(occupancy$time_in_zone[occupancy$zone_id %in% c("open_left", "open_right")])))
 cat(sprintf("  - Time in closed arms: %.2f%% (%.2f sec)\n",
-            sum(occupancy$percentage[occupancy$zone_id %in% c("closed_arm_1", "closed_arm_2")]),
-            sum(occupancy$time_in_zone[occupancy$zone_id %in% c("closed_arm_1", "closed_arm_2")])))
-cat(sprintf("  - Total distance: %.2f pixels\n", distance$total_distance))
+            sum(occupancy$percentage[occupancy$zone_id %in% c("closed_top", "closed_bottom")]),
+            sum(occupancy$time_in_zone[occupancy$zone_id %in% c("closed_top", "closed_bottom")])))
+cat(sprintf("  - Total distance: %.2f pixels\n", distance))
 
 cat("\nGenerated Files:\n")
 cat(sprintf("  Report: %s\n", file.path(output_dir, sprintf("%s_report.html", subject_id))))

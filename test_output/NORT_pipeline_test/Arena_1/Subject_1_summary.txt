@@ -1,0 +1,51 @@
+========================================================
+Novel Object Recognition Test Analysis - Subject_1
+========================================================
+
+TRIAL INFORMATION:
+  Total Duration: 307.63 seconds (5.13 minutes)
+  Novel Object Side: LEFT
+  Trial Valid: NO (min exploration: 10s)
+
+OBJECT EXPLORATION:
+  Novel Object Time: 1.76 seconds
+  Familiar Object Time: 4.32 seconds
+  Total Exploration Time: 6.08 seconds
+  Novel Object Approaches: 3
+  Familiar Object Approaches: 5
+
+MEMORY DISCRIMINATION INDICES:
+  Discrimination Index (DI): -0.421
+  Preference Score: 28.95%
+  Recognition Index: 0.289
+
+  DI Interpretation:
+    Familiarity preference - possible neophobia or alternate strategy
+
+LOCOMOTOR ACTIVITY:
+  Total Distance Traveled: 1741.22 cm
+  Average Velocity: 5.80 cm/s
+
+BEHAVIORAL INTERPRETATION:
+  - FAMILIARITY preference detected (unusual)
+  - May indicate neophobia (fear of novel object)
+  - Or alternative exploration strategy (returning to familiar)
+
+  WARNING: Low total exploration (6.1 sec < 10 sec minimum)
+  - Results may not be reliable
+  - Subject may have been anxious, unmotivated, or fatigued
+
+========================================================
+DISCRIMINATION INDEX GUIDE:
+  DI > 0.3  : Strong novelty preference - intact memory
+  DI 0.1-0.3: Moderate novelty preference - likely intact
+  DI -0.1-0.1: Weak/no discrimination - impaired or no learning
+  DI < -0.1 : Familiarity preference - neophobia/alternate strategy
+
+VALIDITY CRITERIA:
+  - Minimum 10 seconds total exploration recommended
+  - Low exploration may indicate lack of motivation or anxiety
+
+========================================================
+Generated: 2026-01-09 10:34:25.329733
+========================================================
