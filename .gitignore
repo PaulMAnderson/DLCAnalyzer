@@ -1,0 +1,23 @@
+# R / RStudio
+.Rhistory
+.RData
+.Rproj.user
+*.Rproj
+
+# Output directories
+output/
+analyze_all_behavioral_data_files/
+*_files/
+
+# Test files
+test_*.R
+validate_*.sh
+
+# Temporary files
+*.tmp
+*.log
+~$*.xlsx
+
+# System files
+.DS_Store
+Thumbs.db
