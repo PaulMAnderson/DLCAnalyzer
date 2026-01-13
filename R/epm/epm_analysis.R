@@ -112,7 +112,7 @@ analyze_epm <- function(epm_data, fps = NULL, min_exploration = 5) {
   latency_to_open <- calculate_zone_latency(df$zone_open_arms, fps)
 
   # Calculate locomotor activity
-  total_distance <- calculate_total_distance(df$x, df$y)
+  total_distance <- calculate_total_distance_vectors(df$x, df$y)
   avg_velocity <- total_distance / total_duration
 
   # Calculate distance in each zone type (using existing function)
@@ -248,9 +248,10 @@ calculate_entries_ratio <- function(entries_open, entries_closed) {
 }
 
 
-#' Calculate total distance traveled
+#' Calculate total distance traveled from vectors
 #'
 #' Calculates cumulative distance from frame-to-frame displacement.
+#' Internal EPM function - uses vectors instead of data frame.
 #'
 #' @param x Numeric vector. X coordinates
 #' @param y Numeric vector. Y coordinates
@@ -258,7 +259,7 @@ calculate_entries_ratio <- function(entries_open, entries_closed) {
 #' @return Numeric. Total distance in same units as coordinates (typically cm)
 #'
 #' @keywords internal
-calculate_total_distance <- function(x, y) {
+calculate_total_distance_vectors <- function(x, y) {
   if (length(x) != length(y)) {
     stop("x and y must have the same length", call. = FALSE)
   }
