@@ -67,7 +67,7 @@ load_oft_data <- function(file_path, fps = 25, body_part = "Center-point") {
     include_zones = TRUE
   )
 
-  # Process each arena
+  # Process each animal (tracked in different arenas)
   results <- list()
 
   for (sheet_name in names(raw_data)) {
@@ -80,8 +80,9 @@ load_oft_data <- function(file_path, fps = 25, body_part = "Center-point") {
     df <- standardize_oft_columns(df)
 
     # Create result structure
-    arena_result <- list(
+    animal_result <- list(
       data = df,
+      animal_id = sheet_data$animal_id,
       arena_id = sheet_data$arena_id,
       subject_id = sheet_data$subject_id,
       metadata = sheet_data$metadata,
@@ -90,14 +91,16 @@ load_oft_data <- function(file_path, fps = 25, body_part = "Center-point") {
       sheet_name = sheet_name
     )
 
-    # Use arena_id as name if available
-    if (!is.na(sheet_data$arena_id)) {
+    # Use animal_id as primary identifier, fall back to arena_id if not available
+    if (!is.na(sheet_data$animal_id) && sheet_data$animal_id != "") {
+      result_name <- as.character(sheet_data$animal_id)
+    } else if (!is.na(sheet_data$arena_id)) {
       result_name <- paste0("Arena_", sheet_data$arena_id)
     } else {
       result_name <- sheet_name
     }
 
-    results[[result_name]] <- arena_result
+    results[[result_name]] <- animal_result
   }
 
   return(results)

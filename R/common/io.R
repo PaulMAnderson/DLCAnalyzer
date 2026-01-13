@@ -78,9 +78,9 @@ parse_ethovision_sheet_name <- function(sheet_name) {
 #'
 #' @export
 identify_zone_columns <- function(column_names, paradigm = NULL) {
-  # Find columns matching zone pattern: "In zone(...)" ONLY (not "In zone 2")
-  # "In zone 2" contains wall zones which are different from primary zones
-  zone_pattern <- "^In zone\\("
+  # Find columns matching zone pattern: "In zone(...)" AND "In zone 2(...)"
+  # Ethovision exports can have both primary zones "In zone(...)" and secondary "In zone 2(...)"
+  zone_pattern <- "^In zone( [0-9]+)?\\("
   zone_indices <- grep(zone_pattern, column_names, ignore.case = TRUE)
 
   if (length(zone_indices) == 0) {
@@ -167,9 +167,11 @@ identify_zone_columns <- function(column_names, paradigm = NULL) {
       pattern <- "center|floor|wall|corner"
       zone_df <- zone_df[grepl(pattern, zone_df$zone_name, ignore.case = TRUE), ]
     } else if (paradigm == "nort") {
-      # NORT uses "object" zones
-      pattern <- "object"
+      # NORT uses "object", "center", and "floor" zones (exclude walls/arena boundary)
+      pattern <- "object|center|floor"
       zone_df <- zone_df[grepl(pattern, zone_df$zone_name, ignore.case = TRUE), ]
+      # Exclude wall and arena zones
+      zone_df <- zone_df[!grepl("wall|^arena$", zone_df$zone_name, ignore.case = TRUE), ]
     } else if (paradigm == "epm") {
       # EPM uses "arm" and "center" zones
       pattern <- "arm|center"
@@ -202,17 +204,29 @@ identify_zone_columns <- function(column_names, paradigm = NULL) {
 #' }
 #'
 #' @export
-filter_zone_columns <- function(df, zone_info, arena_id, body_part = "Center-point") {
+filter_zone_columns <- function(df, zone_info, arena_id, body_part = "Center-point",
+                                keep_all_body_parts = FALSE) {
   # Filter to matching arena and body part
   # For zones WITHOUT arena numbers (single-arena files), include if body part matches
   # For zones WITH arena numbers, only include if arena number matches
-  relevant_zones <- zone_info[
-    (is.na(zone_info$arena_number) | zone_info$arena_number == arena_id) &
-    tolower(zone_info$body_part) == tolower(body_part),
-  ]
+  # If keep_all_body_parts is TRUE, include zones from all body parts (useful for NORT)
+
+  if (keep_all_body_parts) {
+    # Include all body parts for this arena
+    relevant_zones <- zone_info[
+      is.na(zone_info$arena_number) | zone_info$arena_number == arena_id,
+    ]
+  } else {
+    # Original behavior - filter by body part
+    relevant_zones <- zone_info[
+      (is.na(zone_info$arena_number) | zone_info$arena_number == arena_id) &
+      tolower(zone_info$body_part) == tolower(body_part),
+    ]
+  }
 
   if (nrow(relevant_zones) == 0) {
-    warning("No zone columns found for arena ", arena_id, " and body part ", body_part)
+    warning("No zone columns found for arena ", arena_id,
+            if (!keep_all_body_parts) paste0(" and body part ", body_part) else "")
     return(df)
   }
 
@@ -222,16 +236,66 @@ filter_zone_columns <- function(df, zone_info, arena_id, body_part = "Center-poi
   # Create simplified zone names for column names
   # "light floor 1" -> "zone_light_floor"
   # "door area 1" -> "zone_door_area"
-  new_names <- sapply(relevant_zones$zone_name, function(zn) {
+  # For NORT with keep_all_body_parts, also include body part to avoid conflicts:
+  # "round object left / Nose-point" -> for objects, prefer nose-point as primary name
+  new_names <- sapply(seq_along(relevant_zones$zone_name), function(i) {
+    zn <- relevant_zones$zone_name[i]
+    bp <- relevant_zones$body_part[i]
+
     # Remove arena number
     zn_clean <- sub("[[:space:]]*[0-9]+$", "", zn)
     # Replace spaces with underscores
     zn_clean <- gsub("[[:space:]]+", "_", trimws(zn_clean))
-    # Add "zone_" prefix
-    paste0("zone_", tolower(zn_clean))
+
+    # Special handling for NORT object zones - use Nose-point zones as primary
+    is_object_zone <- grepl("object", zn_clean, ignore.case = TRUE)
+
+    if (keep_all_body_parts && !is.na(bp) && bp != "unknown") {
+      # For object zones with Nose-point, use as primary (no suffix)
+      if (is_object_zone && tolower(bp) == "nose-point") {
+        paste0("zone_", tolower(zn_clean))
+      } else if (tolower(bp) != tolower(body_part)) {
+        # For other zones or different body parts, add suffix
+        bp_suffix <- gsub("[[:space:]-]+", "_", tolower(trimws(bp)))
+        bp_suffix <- gsub("point$", "", bp_suffix)  # Remove "point" suffix
+        paste0("zone_", tolower(zn_clean), "_", bp_suffix)
+      } else {
+        paste0("zone_", tolower(zn_clean))
+      }
+    } else {
+      paste0("zone_", tolower(zn_clean))
+    }
   })
 
   colnames(zone_cols) <- new_names
+
+  # Handle duplicates - for object zones, prefer Nose-point over Center-point
+  if (keep_all_body_parts && any(duplicated(new_names))) {
+    # Find duplicates
+    dup_names <- unique(new_names[duplicated(new_names)])
+
+    for (dup_name in dup_names) {
+      dup_indices <- which(new_names == dup_name)
+
+      # If this is an object zone, prefer Nose-point
+      if (grepl("object", dup_name)) {
+        body_parts <- relevant_zones$body_part[dup_indices]
+        nose_idx <- which(tolower(body_parts) == "nose-point")
+
+        if (length(nose_idx) > 0) {
+          # Keep only the Nose-point version
+          keep_idx <- dup_indices[nose_idx[1]]
+          remove_idx <- setdiff(dup_indices, keep_idx)
+
+          # Remove duplicates
+          zone_cols <- zone_cols[, -remove_idx, drop = FALSE]
+          new_names <- new_names[-remove_idx]
+        }
+      }
+    }
+
+    colnames(zone_cols) <- new_names
+  }
 
   # Combine with original df (remove original zone columns first)
   df_clean <- df[, -zone_info$column_index, drop = FALSE]
@@ -283,7 +347,8 @@ filter_zone_columns <- function(df, zone_info, arena_id, body_part = "Center-poi
 read_ethovision_excel_enhanced <- function(file_path, fps = 25, sheet = NULL,
                                            skip_control = TRUE, paradigm = NULL,
                                            body_part = "Center-point",
-                                           include_zones = TRUE) {
+                                           include_zones = TRUE,
+                                           keep_all_body_parts = FALSE) {
   # Check for readxl package
   if (!requireNamespace("readxl", quietly = TRUE)) {
     stop("Package 'readxl' is required. Install with: install.packages('readxl')",
@@ -339,7 +404,9 @@ read_ethovision_excel_enhanced <- function(file_path, fps = 25, sheet = NULL,
     subject_id = as.character(header_raw[9, 2]),
     start_time = as.character(header_raw[13, 2]),
     trial_duration = as.character(header_raw[14, 2]),
-    recording_duration = as.character(header_raw[16, 2])
+    recording_duration = as.character(header_raw[16, 2]),
+    # Extract animal ID from row 35 (User-defined Independent Variable: mouse ID)
+    animal_id = as.character(header_raw[35, 2])
   )
 
   # Get column names
@@ -376,7 +443,8 @@ read_ethovision_excel_enhanced <- function(file_path, fps = 25, sheet = NULL,
   if (include_zones && nrow(zone_info) > 0 && !is.na(sheet_info$arena_id)) {
     tracking_data <- filter_zone_columns(tracking_data, zone_info,
                                         arena_id = sheet_info$arena_id,
-                                        body_part = body_part)
+                                        body_part = body_part,
+                                        keep_all_body_parts = keep_all_body_parts)
   }
 
   # Package results
@@ -386,6 +454,7 @@ read_ethovision_excel_enhanced <- function(file_path, fps = 25, sheet = NULL,
     zone_info = zone_info,
     arena_id = sheet_info$arena_id,
     subject_id = sheet_info$subject_id,
+    animal_id = metadata$animal_id,  # Animal ID from user-defined variable
     fps = fps,
     n_frames = nrow(tracking_data),
     filename = basename(file_path),
@@ -426,7 +495,8 @@ read_ethovision_excel_multi_enhanced <- function(file_path, fps = 25,
                                                  skip_control = TRUE,
                                                  paradigm = NULL,
                                                  body_part = "Center-point",
-                                                 include_zones = TRUE) {
+                                                 include_zones = TRUE,
+                                                 keep_all_body_parts = FALSE) {
   # Check for readxl package
   if (!requireNamespace("readxl", quietly = TRUE)) {
     stop("Package 'readxl' is required. Install with: install.packages('readxl')",
@@ -463,7 +533,8 @@ read_ethovision_excel_multi_enhanced <- function(file_path, fps = 25,
       skip_control = FALSE,
       paradigm = paradigm,
       body_part = body_part,
-      include_zones = include_zones
+      include_zones = include_zones,
+      keep_all_body_parts = keep_all_body_parts
     )
   }
 

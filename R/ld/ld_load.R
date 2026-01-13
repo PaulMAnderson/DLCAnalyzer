@@ -8,14 +8,15 @@ NULL
 #' Load LD data from Ethovision Excel file
 #'
 #' Loads Light/Dark box data with automatic zone extraction for multi-arena
-#' experiments. Extracts "light floor" and "door area" zones for each arena.
+#' experiments. Extracts "light floor" and "door area" zones for each animal.
+#' Each animal is identified by the mouse ID in the user-defined variable (row 35).
 #'
 #' @param file_path Character. Path to the Ethovision Excel file
 #' @param fps Numeric. Frames per second (default: 25)
 #' @param body_part Character. Body part for zone analysis (default: "Center-point")
 #'   Options: "Center-point", "Nose-point", "Tail-point"
 #'
-#' @return A named list where each element contains data for one arena:
+#' @return A named list where each element contains data for one animal:
 #'   \describe{
 #'     \item{data}{Data frame with columns:
 #'       \itemize{
@@ -28,9 +29,10 @@ NULL
 #'         \item zone_door_area: Binary (0/1) for door/transition zone
 #'       }
 #'     }
-#'     \item{arena_id}{Numeric. Arena number}
+#'     \item{animal_id}{Character. Animal ID from user-defined variable}
+#'     \item{arena_id}{Numeric. Arena number where animal was tracked}
 #'     \item{subject_id}{Numeric. Subject number}
-#'     \item{metadata}{List of experimental metadata}
+#'     \item{metadata}{List of experimental metadata including animal_id}
 #'     \item{fps}{Frames per second}
 #'   }
 #'
@@ -39,11 +41,14 @@ NULL
 #' # Load LD data
 #' ld_data <- load_ld_data("LD_20251001.xlsx")
 #'
-#' # Access arena 1
-#' arena1 <- ld_data[["Arena_1"]]
+#' # Access animal ID7687
+#' animal <- ld_data[["ID7687"]]
+#'
+#' # Check which arena the animal was in
+#' print(animal$arena_id)  # e.g., 1
 #'
 #' # Check zone occupancy
-#' mean(arena1$data$zone_light_floor)  # Proportion of time in light
+#' mean(animal$data$zone_light_floor)  # Proportion of time in light
 #' }
 #'
 #' @export
@@ -64,7 +69,7 @@ load_ld_data <- function(file_path, fps = 25, body_part = "Center-point") {
     include_zones = TRUE
   )
 
-  # Process each arena
+  # Process each animal (tracked in different arenas)
   results <- list()
 
   for (sheet_name in names(raw_data)) {
@@ -77,8 +82,9 @@ load_ld_data <- function(file_path, fps = 25, body_part = "Center-point") {
     df <- standardize_ld_columns(df)
 
     # Create result structure
-    arena_result <- list(
+    animal_result <- list(
       data = df,
+      animal_id = sheet_data$animal_id,
       arena_id = sheet_data$arena_id,
       subject_id = sheet_data$subject_id,
       metadata = sheet_data$metadata,
@@ -87,14 +93,16 @@ load_ld_data <- function(file_path, fps = 25, body_part = "Center-point") {
       sheet_name = sheet_name
     )
 
-    # Use arena_id as name if available
-    if (!is.na(sheet_data$arena_id)) {
+    # Use animal_id as primary identifier, fall back to arena_id if not available
+    if (!is.na(sheet_data$animal_id) && sheet_data$animal_id != "") {
+      result_name <- as.character(sheet_data$animal_id)
+    } else if (!is.na(sheet_data$arena_id)) {
       result_name <- paste0("Arena_", sheet_data$arena_id)
     } else {
       result_name <- sheet_name
     }
 
-    results[[result_name]] <- arena_result
+    results[[result_name]] <- animal_result
   }
 
   return(results)
@@ -193,23 +201,23 @@ validate_ld_data <- function(ld_data) {
 
   all_valid <- TRUE
 
-  for (arena_name in names(ld_data)) {
-    arena_data <- ld_data[[arena_name]]
+  for (animal_name in names(ld_data)) {
+    animal_data <- ld_data[[animal_name]]
 
     # Check structure
-    if (!"data" %in% names(arena_data)) {
-      warning("Arena ", arena_name, " missing 'data' element", call. = FALSE)
+    if (!"data" %in% names(animal_data)) {
+      warning("Animal ", animal_name, " missing 'data' element", call. = FALSE)
       all_valid <- FALSE
       next
     }
 
-    df <- arena_data$data
+    df <- animal_data$data
 
     # Check required columns
     required_cols <- c("time", "x_center", "y_center")
     missing_cols <- setdiff(required_cols, colnames(df))
     if (length(missing_cols) > 0) {
-      warning("Arena ", arena_name, " missing required columns: ",
+      warning("Animal ", animal_name, " missing required columns: ",
               paste(missing_cols, collapse = ", "), call. = FALSE)
       all_valid <- FALSE
     }
@@ -217,7 +225,7 @@ validate_ld_data <- function(ld_data) {
     # Check for zone columns
     zone_cols <- grep("^zone_", colnames(df), value = TRUE)
     if (length(zone_cols) == 0) {
-      warning("Arena ", arena_name, " has no zone columns", call. = FALSE)
+      warning("Animal ", animal_name, " has no zone columns", call. = FALSE)
       all_valid <- FALSE
     }
 
@@ -226,7 +234,7 @@ validate_ld_data <- function(ld_data) {
       zone_vals <- df[[zone_col]]
       unique_vals <- unique(zone_vals[!is.na(zone_vals)])
       if (!all(unique_vals %in% c(0, 1))) {
-        warning("Arena ", arena_name, " zone column ", zone_col,
+        warning("Animal ", animal_name, " zone column ", zone_col,
                 " has non-binary values: ", paste(unique_vals, collapse = ", "),
                 call. = FALSE)
         all_valid <- FALSE
@@ -237,7 +245,7 @@ validate_ld_data <- function(ld_data) {
     if (any(is.na(df$x_center)) || any(is.na(df$y_center))) {
       n_missing <- sum(is.na(df$x_center) | is.na(df$y_center))
       pct_missing <- round(n_missing / nrow(df) * 100, 2)
-      warning("Arena ", arena_name, " has ", n_missing, " frames (",
+      warning("Animal ", animal_name, " has ", n_missing, " frames (",
               pct_missing, "%) with missing coordinates", call. = FALSE)
     }
   }
@@ -251,7 +259,7 @@ validate_ld_data <- function(ld_data) {
 #'
 #' @param ld_data List. Output from load_ld_data()
 #'
-#' @return Data frame with summary information for each arena
+#' @return Data frame with summary information for each animal
 #'
 #' @examples
 #' \dontrun{
@@ -264,21 +272,21 @@ validate_ld_data <- function(ld_data) {
 summarize_ld_data <- function(ld_data) {
   summary_list <- list()
 
-  for (arena_name in names(ld_data)) {
-    arena_data <- ld_data[[arena_name]]
-    df <- arena_data$data
+  for (animal_name in names(ld_data)) {
+    animal_data <- ld_data[[animal_name]]
+    df <- animal_data$data
 
     # Find zone columns
     zone_cols <- grep("^zone_", colnames(df), value = TRUE)
 
     # Calculate basic stats
-    summary_list[[arena_name]] <- data.frame(
-      arena = arena_name,
-      arena_id = ifelse(is.null(arena_data$arena_id), NA, arena_data$arena_id),
-      subject_id = ifelse(is.null(arena_data$subject_id), NA, arena_data$subject_id),
+    summary_list[[animal_name]] <- data.frame(
+      animal_id = animal_name,
+      arena_id = ifelse(is.null(animal_data$arena_id), NA, animal_data$arena_id),
+      subject_id = ifelse(is.null(animal_data$subject_id), NA, animal_data$subject_id),
       n_frames = nrow(df),
       duration_sec = max(df$time, na.rm = TRUE),
-      fps = arena_data$fps,
+      fps = animal_data$fps,
       n_zones = length(zone_cols),
       zone_columns = paste(zone_cols, collapse = ", "),
       pct_missing_coords = round(sum(is.na(df$x_center) | is.na(df$y_center)) / nrow(df) * 100, 2),
